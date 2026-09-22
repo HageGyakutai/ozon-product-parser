@@ -15,9 +15,13 @@ def part(text, mime="text/plain"):
 
 
 def message(sender, parts, received=2000):
-    return {"internalDate": str(received), "payload": {
-        "headers": [{"name": "From", "value": sender}], "parts": parts,
-    }}
+    return {
+        "internalDate": str(received),
+        "payload": {
+            "headers": [{"name": "From", "value": sender}],
+            "parts": parts,
+        },
+    }
 
 
 class FakeService:
@@ -45,11 +49,14 @@ def test_code_formats(body):
     assert verification_code("No verification here") is None
 
 
-@pytest.mark.parametrize("parts", [
-    [part("Ваш код: 123456")],
-    [part("<p>Ваш <strong>код</strong>: 123456</p>", "text/html")],
-    [{"mimeType": "multipart/mixed", "parts": [part("Code 123456")]}],
-])
+@pytest.mark.parametrize(
+    "parts",
+    [
+        [part("Ваш код: 123456")],
+        [part("<p>Ваш <strong>код</strong>: 123456</p>", "text/html")],
+        [{"mimeType": "multipart/mixed", "parts": [part("Code 123456")]}],
+    ],
+)
 def test_wait_for_code_reads_plain_html_and_nested_mime(parts):
     service = FakeService({"new": message("Ozon <login@mail.ozon.ru>", parts)})
     assert wait_for_code(service, datetime.fromtimestamp(1, UTC), query="subject:login") == "123456"
@@ -57,21 +64,27 @@ def test_wait_for_code_reads_plain_html_and_nested_mime(parts):
 
 
 def test_old_spoofed_and_codeless_messages_are_skipped():
-    service = FakeService({
-        "old": message("login@ozon.ru", [part("Code 111111")], received=999),
-        "spoofed": message("Ozon <login@fakeozon.ru>", [part("Code 222222")]),
-        "other": message("Ozon <login@ozon.ru.evil.test>", [part("Code 333333")]),
-        "empty": message("login@ozon.ru", [part("No verification here")]),
-        "valid": message("login@ozon.ru", [part("444444 — код для входа")]),
-    })
+    service = FakeService(
+        {
+            "old": message("login@ozon.ru", [part("Code 111111")], received=999),
+            "spoofed": message("Ozon <login@fakeozon.ru>", [part("Code 222222")]),
+            "other": message("Ozon <login@ozon.ru.evil.test>", [part("Code 333333")]),
+            "empty": message("login@ozon.ru", [part("No verification here")]),
+            "valid": message("login@ozon.ru", [part("444444 — код для входа")]),
+        }
+    )
     assert wait_for_code(service, datetime.fromtimestamp(1, UTC)) == "444444"
 
 
 def test_timeout_without_matching_email(monkeypatch):
     clock = iter([0, 0, 0, 1, 1, 1, 2, 2])
-    monkeypatch.setattr("ozon_parser.gmail.time", SimpleNamespace(
-        monotonic=lambda: next(clock), sleep=lambda _: None,
-    ))
+    monkeypatch.setattr(
+        "ozon_parser.gmail.time",
+        SimpleNamespace(
+            monotonic=lambda: next(clock),
+            sleep=lambda _: None,
+        ),
+    )
     service = FakeService({"old": message("login@ozon.ru", [part("Code 123456")], received=0)})
     with pytest.raises(TimeoutError, match="No new Ozon verification"):
         wait_for_code(service, datetime.fromtimestamp(1, UTC), timeout=2, interval=1)
@@ -79,9 +92,11 @@ def test_timeout_without_matching_email(monkeypatch):
 
 def test_sender_domain_is_configurable(monkeypatch):
     monkeypatch.setenv("GMAIL_SENDER_DOMAINS", "notifications.example.org")
-    service = FakeService({
-        "new": message("sender@notifications.example.org", [part("Code 123456")]),
-    })
+    service = FakeService(
+        {
+            "new": message("sender@notifications.example.org", [part("Code 123456")]),
+        }
+    )
     assert wait_for_code(service, datetime.fromtimestamp(1, UTC)) == "123456"
 
 
@@ -115,9 +130,12 @@ def test_expired_oauth_token_is_refreshed_without_new_login(tmp_path, monkeypatc
 
     module("google.auth.transport.requests", Request=object)
     module("google.oauth2.credentials", Credentials=FakeCredentials)
-    module("google_auth_oauthlib.flow", InstalledAppFlow=SimpleNamespace(
-        from_client_secrets_file=lambda *args: pytest.fail("Unexpected new OAuth login")
-    ))
+    module(
+        "google_auth_oauthlib.flow",
+        InstalledAppFlow=SimpleNamespace(
+            from_client_secrets_file=lambda *args: pytest.fail("Unexpected new OAuth login")
+        ),
+    )
     module("googleapiclient.discovery", build=lambda *args, **kwargs: "gmail-service")
     assert gmail_service(str(credentials_file), str(token_file)) == "gmail-service"
     assert events == ["loaded", "refreshed"]
