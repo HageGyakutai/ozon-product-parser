@@ -91,13 +91,28 @@ def product_session(cookies_file: str = "cookies.json") -> requests.Session:
 
 def fetch_product(session: requests.Session, sku: str) -> str:
     response = session.get(f"https://www.ozon.ru/product/{sku}/", timeout=20)
-    if response.status_code in (401, 403):
-        raise ValueError(f"Ozon rejected cookies for SKU={sku}; authenticate again")
+    blocked = (
+        "antibot challenge" in response.text[:10000].casefold()
+        or blocked_page_text(response.text)
+    )
+    if blocked:
+        raise ValueError(
+            f"Ozon blocked automated HTTP access to SKU={sku} "
+            f"(HTTP {response.status_code}); browser cookies may still be valid"
+        )
+    if response.status_code == 401:
+        raise ValueError(
+            f"Ozon returned HTTP 401 for SKU={sku}; "
+            "the saved session is not authorized or has expired"
+        )
+    if response.status_code == 403:
+        raise ValueError(
+            f"Ozon returned HTTP 403 for SKU={sku}; access is forbidden for this HTTP client. "
+            "This does not prove that the browser cookies are invalid"
+        )
     if response.status_code == 404:
         raise ValueError(f"SKU={sku} not found")
     response.raise_for_status()
-    if "data.ozon.ru" in response.url:
-        raise ValueError("Ozon redirected to login; authenticate again")
-    if "antibot challenge" in response.text[:10000].casefold() or blocked_page_text(response.text):
-        raise ValueError(f"Ozon blocked access to SKU={sku}; product HTML unavailable")
+    if "data.ozon.ru" in response.url or "sso.ozon.ru" in response.url:
+        raise ValueError("Ozon redirected to login; saved session is not authorized")
     return response.text
