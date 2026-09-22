@@ -218,6 +218,35 @@ def inspect_html(html: str, sku: str, max_lines: int = 350) -> list[str]:
             "DOM_WIDGETS " + ",".join(f"{name}:{count}" for name, count in interesting_widgets[:80])
         )
 
+    detail_widget_names = {
+        "webGallery",
+        "webListPhotos",
+        "webDescription",
+        "richTextWidget",
+        "webReviewGallery",
+        "webProductMainWidget",
+        "webShortCharacteristics",
+        "webCharacteristics",
+    }
+    for widget_name in sorted(detail_widget_names):
+        for occurrence, element in enumerate(
+            soup.select(f'[data-widget="{widget_name}"]'),
+            start=1,
+        ):
+            emit(
+                "WIDGET_DETAIL "
+                f"name={widget_name} occurrence={occurrence} "
+                f"img={len(element.find_all('img'))} "
+                f"picture={len(element.find_all('picture'))} "
+                f"video={len(element.find_all('video'))} "
+                f"source={len(element.find_all('source'))} "
+                f"indexed={len(element.select('[data-index]'))} "
+                f"table={len(element.find_all('table'))} "
+                f"ul={len(element.find_all('ul'))} "
+                f"ol={len(element.find_all('ol'))} "
+                f"text_chars={len(element.get_text(' ', strip=True))}"
+            )
+
     indexed_nodes = soup.select("[data-index]")
     if indexed_nodes:
         emit(f"dom_indexed_nodes={len(indexed_nodes)}")
