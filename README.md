@@ -40,6 +40,8 @@ docker compose up --build --exit-code-from migrate migrate
 
 В `.env` заполните `OZON_PHONE` и пути к файлам Gmail OAuth. Создайте проект в Google Cloud, включите Gmail API, создайте OAuth Client ID типа Desktop и сохраните его как `credentials.json`. На первом запуске официальная библиотека Google попросит разрешить доступ `gmail.readonly` через браузер. Файлы `credentials.json`, `token.json` и `cookies.json` исключены из Git.
 
+`GMAIL_QUERY` задаёт поисковый запрос Gmail (по умолчанию `ozon`), а `GMAIL_SENDER_DOMAINS` — допустимые домены адреса отправителя через запятую (по умолчанию `ozon.ru`, включая поддомены). Отбор по адресу и времени получения выполняется дополнительно после поиска Gmail. Реальный домен отправителя подтвердите на письме своего аккаунта и при необходимости настройте; содержимое писем и коды не журналируются.
+
 ```bash
 uv run python scripts/get_cookies.py
 ```
