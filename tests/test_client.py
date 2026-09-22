@@ -40,12 +40,28 @@ def test_antibot_html_is_not_treated_as_product():
 
 def test_browser_session_roundtrip_preserves_user_agent_and_cookie_attributes(tmp_path):
     path = tmp_path / "cookies.json"
-    save_browser_session(path, [
-        {"domain": ".ozon.ru", "path": "/product", "secure": True,
-         "expires": int(time.time()) + 3600, "name": "session", "value": "secret"},
-        {"domain": "www.ozon.ru", "path": "/", "secure": False,
-         "expires": -1, "name": "session_cookie", "value": "other"},
-    ], "Firefox browser UA")
+    save_browser_session(
+        path,
+        [
+            {
+                "domain": ".ozon.ru",
+                "path": "/product",
+                "secure": True,
+                "expires": int(time.time()) + 3600,
+                "name": "session",
+                "value": "secret",
+            },
+            {
+                "domain": "www.ozon.ru",
+                "path": "/",
+                "secure": False,
+                "expires": -1,
+                "name": "session_cookie",
+                "value": "other",
+            },
+        ],
+        "Firefox browser UA",
+    )
     assert path.stat().st_mode & 0o777 == 0o600
     session = product_session(str(path))
     try:
@@ -62,13 +78,21 @@ def test_browser_session_roundtrip_preserves_user_agent_and_cookie_attributes(tm
 
 def test_expired_and_foreign_cookies_are_ignored(tmp_path):
     path = tmp_path / "cookies.json"
-    save_browser_session(path, [
-        {"domain": "fakeozon.ru", "name": "foreign", "value": "a"},
-        {"domain": "ozon.ru.evil.test", "name": "foreign2", "value": "b"},
-        {"domain": ".ozon.ru", "name": "expired", "value": "c",
-         "expires": int(time.time()) - 10},
-        {"domain": "www.ozon.ru", "name": "valid", "value": "d", "expires": -1},
-    ], "Browser UA")
+    save_browser_session(
+        path,
+        [
+            {"domain": "fakeozon.ru", "name": "foreign", "value": "a"},
+            {"domain": "ozon.ru.evil.test", "name": "foreign2", "value": "b"},
+            {
+                "domain": ".ozon.ru",
+                "name": "expired",
+                "value": "c",
+                "expires": int(time.time()) - 10,
+            },
+            {"domain": "www.ozon.ru", "name": "valid", "value": "d", "expires": -1},
+        ],
+        "Browser UA",
+    )
     session = product_session(str(path))
     try:
         assert [c.name for c in session.cookies] == ["valid"]
@@ -78,8 +102,9 @@ def test_expired_and_foreign_cookies_are_ignored(tmp_path):
 
 def test_all_expired_cookies_fail_without_revealing_values(tmp_path):
     path = tmp_path / "cookies.json"
-    save_browser_session(path, [{"domain": "ozon.ru", "name": "secret",
-                                 "value": "sensitive", "expires": 1}], "UA")
+    save_browser_session(
+        path, [{"domain": "ozon.ru", "name": "secret", "value": "sensitive", "expires": 1}], "UA"
+    )
     with pytest.raises(ValueError, match="No usable Ozon cookies") as exc:
         product_session(str(path))
     assert "sensitive" not in str(exc.value)
@@ -87,7 +112,14 @@ def test_all_expired_cookies_fail_without_revealing_values(tmp_path):
 
 def test_session_rejects_invalid_metadata(tmp_path):
     path = tmp_path / "cookies.json"
-    path.write_text(json.dumps({"version": 1, "user_agent": "bad\rheader",
-                                "cookies": [{"domain": "ozon.ru", "name": "a", "value": "b"}]}))
+    path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "user_agent": "bad\rheader",
+                "cookies": [{"domain": "ozon.ru", "name": "a", "value": "b"}],
+            }
+        )
+    )
     with pytest.raises(ValueError, match="Cookie file damaged"):
         product_session(str(path))
