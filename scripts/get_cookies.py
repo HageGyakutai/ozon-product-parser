@@ -76,11 +76,12 @@ def main() -> None:
         raise ValueError("Set OZON_PHONE in .env before starting Ozon login")
     if not re.fullmatch(r"\+?[0-9]{10,15}", phone):
         raise ValueError("OZON_PHONE must contain 10–15 digits with optional leading +")
+    LOGGER.info("Checking Gmail API access for Ozon verification")
     gmail = gmail_service(
         os.getenv("GMAIL_CREDENTIALS_FILE", "credentials.json"),
         os.getenv("GMAIL_TOKEN_FILE", "token.json"),
     )
-    LOGGER.info("Starting Ozon authentication")
+    LOGGER.info("Starting Ozon browser login")
     with sync_playwright() as playwright:
         browser_name = os.getenv("OZON_BROWSER", "chromium").strip().lower()
         if browser_name not in {"chromium", "firefox", "webkit"}:
