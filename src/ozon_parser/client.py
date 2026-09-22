@@ -37,10 +37,12 @@ def product_session(cookies_file: str = "cookies.json") -> requests.Session:
     except (ValueError, OSError) as exc:
         raise ValueError("Cookie file damaged; authenticate again") from exc
     session = requests.Session()
-    session.headers.update({
-        "Accept-Language": "ru-RU,ru;q=0.9",
-        "Accept": "text/html,application/xhtml+xml",
-    })
+    session.headers.update(
+        {
+            "Accept-Language": "ru-RU,ru;q=0.9",
+            "Accept": "text/html,application/xhtml+xml",
+        }
+    )
     if user_agent is not None:
         session.headers["User-Agent"] = user_agent
     session.mount(
@@ -72,10 +74,16 @@ def product_session(cookies_file: str = "cookies.json") -> requests.Session:
                 expiry = None
             else:
                 expiry = int(expiry)
-        session.cookies.set_cookie(create_cookie(
-            name=name, value=value, domain=domain, path=cookie_path,
-            secure=secure, expires=expiry,
-        ))
+        session.cookies.set_cookie(
+            create_cookie(
+                name=name,
+                value=value,
+                domain=domain,
+                path=cookie_path,
+                secure=secure,
+                expires=expiry,
+            )
+        )
     if not session.cookies:
         raise ValueError("No usable Ozon cookies; authenticate again")
     return session
