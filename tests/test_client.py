@@ -123,3 +123,41 @@ def test_session_rejects_invalid_metadata(tmp_path):
     )
     with pytest.raises(ValueError, match="Cookie file damaged"):
         product_session(str(path))
+
+
+def test_403_antibot_does_not_claim_cookies_are_invalid():
+    response = SimpleNamespace(
+        status_code=403,
+        url="https://www.ozon.ru/product/123/",
+        text="<html><title>Antibot Challenge Page</title></html>",
+        raise_for_status=lambda: None,
+    )
+    session = SimpleNamespace(get=lambda *args, **kwargs: response)
+    with pytest.raises(ValueError, match="blocked automated HTTP access") as exc:
+        fetch_product(session, "123")
+    assert "may still be valid" in str(exc.value)
+
+
+def test_plain_403_is_reported_as_http_client_forbidden():
+    response = SimpleNamespace(
+        status_code=403,
+        url="https://www.ozon.ru/product/123/",
+        text="<html><title>Forbidden</title></html>",
+        raise_for_status=lambda: None,
+    )
+    session = SimpleNamespace(get=lambda *args, **kwargs: response)
+    with pytest.raises(ValueError, match="HTTP 403") as exc:
+        fetch_product(session, "123")
+    assert "does not prove" in str(exc.value)
+
+
+def test_401_reports_expired_or_unauthorized_session():
+    response = SimpleNamespace(
+        status_code=401,
+        url="https://www.ozon.ru/product/123/",
+        text="<html></html>",
+        raise_for_status=lambda: None,
+    )
+    session = SimpleNamespace(get=lambda *args, **kwargs: response)
+    with pytest.raises(ValueError, match="HTTP 401"):
+        fetch_product(session, "123")
