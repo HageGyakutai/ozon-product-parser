@@ -143,6 +143,16 @@ uv run python scripts/parse_ozon.py 2359066702 \
 4. Выполните `uv run python scripts/parse_ozon.py <SKU> --html-file real-product.html`.
 5. Проверьте строку в PostgreSQL.
 
+На реальном HTML SKU `2359066702` подтверждены успешный INSERT и повторный UPSERT: сохранился тот же `id` и `created_at`, а `updated_at` изменился. На первом SELECT были заполнены `sku`, `title`, `price`, `rating`, `reviews_total`, `cover_image`; поля `photos_seller`, `videos_seller`, `color`, `material`, `art_set` были NULL, `has_rich_content=false`. Это ещё не доказывает ошибку: часть данных может отсутствовать у конкретного товара либо находиться вне выбранного JSON-LD объекта.
+
+Для безопасного анализа структуры реального HTML без вывода значений используйте:
+
+```bash
+uv run python scripts/inspect_product_html.py real-product.html 2359066702
+```
+
+Инспектор выводит только JSON-пути, имена ключей, типы контейнеров и названия целевых характеристик; значения полей не печатаются.
+
 ```bash
 uv run python scripts/parse_ozon.py 2359066702 2829800382
 uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.csv
