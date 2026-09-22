@@ -34,7 +34,7 @@ def test_antibot_html_is_not_treated_as_product():
         raise_for_status=lambda: None,
     )
     session = SimpleNamespace(get=lambda *args, **kwargs: response)
-    with pytest.raises(ValueError, match="blocked access"):
+    with pytest.raises(ValueError, match="blocked automated HTTP access"):
         fetch_product(session, "123")
 
 
