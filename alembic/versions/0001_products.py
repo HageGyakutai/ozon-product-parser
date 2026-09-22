@@ -3,8 +3,10 @@
 Revision ID: 0001
 Revises:
 """
-from alembic import op
+
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "0001"
 down_revision = None
@@ -28,8 +30,12 @@ def upgrade():
         sa.Column("material", sa.Text()),
         sa.Column("art_set", sa.Text()),
         sa.Column("has_rich_content", sa.Boolean(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
     op.create_index("ix_products_sku", "products", ["sku"], unique=True)
 
