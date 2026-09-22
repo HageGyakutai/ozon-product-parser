@@ -274,10 +274,7 @@ def inspect_html(html: str, sku: str, max_lines: int = 350) -> list[str]:
                     f"keys={keys or '-'} counts={','.join(counts) or '-'}"
                 )
             else:
-                emit(
-                    f"STATE_WIDGET name={widget_name} occurrence={occurrence} "
-                    "parseable=false"
-                )
+                emit(f"STATE_WIDGET name={widget_name} occurrence={occurrence} parseable=false")
 
     indexed_nodes = soup.select("[data-index]")
     if indexed_nodes:
