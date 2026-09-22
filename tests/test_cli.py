@@ -246,3 +246,24 @@ def test_parser_browser_transport_uses_browser_client(monkeypatch):
 
     assert parse.main() is None
     assert [product.sku for product in saved] == ["123"]
+
+
+def test_parser_browser_transport_passes_cdp_endpoint(monkeypatch):
+    captured = {}
+    browser_client = ContextManager()
+    browser_client.fetch_product = lambda sku: f"HTML for {sku}"
+
+    def make_browser_client(*args, **kwargs):
+        captured.update(kwargs)
+        return browser_client
+
+    monkeypatch.setattr(parse, "BrowserProductClient", make_browser_client)
+    monkeypatch.setattr(parse, "extract_product", lambda html, sku: Product(sku, f"Item {sku}"))
+    monkeypatch.setattr(parse, "save_product", lambda db, product: None)
+    monkeypatch.setattr(parse, "Session", lambda engine: ContextManager())
+    monkeypatch.setattr(parse, "database_engine", lambda: SimpleNamespace(dispose=lambda: None))
+    monkeypatch.setenv("OZON_CDP_ENDPOINT", "http://127.0.0.1:9222")
+    monkeypatch.setattr(sys, "argv", ["parse_ozon.py", "123", "--transport", "browser"])
+
+    assert parse.main() is None
+    assert captured["cdp_endpoint"] == "http://127.0.0.1:9222"
