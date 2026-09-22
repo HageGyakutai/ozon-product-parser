@@ -110,6 +110,30 @@ uv run python scripts/parse_ozon.py 2359066702 \
 
 По умолчанию браузер видимый, чтобы не скрывать возможную проверку Ozon. Для headless режима добавьте `--browser-headless`. Используются `OZON_BROWSER` и `OZON_BROWSER_CHANNEL` из окружения; например, при доступном системном Chrome можно задать `OZON_BROWSER=chromium` и `OZON_BROWSER_CHANNEL=chrome`. Если Playwright также получает antibot/403, это фиксируется как ограничение live-доступа, а не маскируется под ошибку extractor.
 
+Live-проверка Playwright-launched Chromium также вернула HTTP 403 до extractor. Для следующей диагностики поддерживается подключение к **внешнему обычному Chrome** через Chrome DevTools Protocol (CDP). Playwright официально поддерживает `connect_over_cdp()`; в этом режиме Chrome запускается отдельно, а parser подключается к существующему default context, добавляет cookies из `cookies.json` и использует тот же extractor. Это по-прежнему не подтверждает автоматический login через Gmail.
+
+Пример запуска отдельного Chrome с remote debugging на Windows (PowerShell; используйте отдельный временный профиль, не основной профиль Chrome):
+
+```powershell
+$chrome = "$env:ProgramFiles\Google\Chrome\Application\chrome.exe"
+if (-not (Test-Path $chrome)) {
+    $chrome = "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+}
+& $chrome --remote-debugging-port=9222 --user-data-dir="$env:TEMP\ozon-parser-cdp"
+```
+
+Пока этот Chrome открыт, проверьте из среды запуска parser, что endpoint доступен, затем задайте:
+
+```bash
+OZON_CDP_ENDPOINT=http://127.0.0.1:9222 \
+OZON_BROWSER=chromium \
+uv run python scripts/parse_ozon.py 2359066702 \
+  --transport browser \
+  --debug-html-dir output/debug
+```
+
+Если WSL не видит Windows endpoint через `127.0.0.1`, не открывайте debug-порт наружу без необходимости. Сначала используйте обычные локальные способы WSL/Windows networking либо запустите parser в той же ОС, где запущен Chrome. CDP endpoint предоставляет полный контроль над браузером, поэтому его нельзя публиковать или оставлять доступным из внешней сети.
+
 ```bash
 uv run python scripts/parse_ozon.py 2359066702 2829800382
 uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.csv
