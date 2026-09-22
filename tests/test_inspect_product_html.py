@@ -63,3 +63,27 @@ def test_inspector_parses_json_scripts_without_declared_json_type():
     assert "parseable_scripts=1" in output
     assert "MATCH script=0" in output
     assert "key=color" in output
+
+
+def test_inspector_reports_widget_structure():
+    html = """
+    <html><body>
+      <div data-widget="webGallery">
+        <div data-index="0"><img src="a.jpg"></div>
+        <div data-index="1"><img src="b.jpg"></div>
+      </div>
+      <div data-widget="richTextWidget">
+        <table><tr><td>Example</td></tr></table>
+      </div>
+      <script type="application/ld+json">
+      {"@type": "Product", "sku": "123", "name": "Example"}
+      </script>
+    </body></html>
+    """
+
+    output = "\n".join(MODULE.inspect_html(html, "123"))
+
+    assert "WIDGET_DETAIL name=webGallery occurrence=1 img=2" in output
+    assert "indexed=2" in output
+    assert "WIDGET_DETAIL name=richTextWidget occurrence=1" in output
+    assert "table=1" in output
