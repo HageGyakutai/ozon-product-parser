@@ -202,7 +202,7 @@
 - [x] Проверить доступность внешнего Chrome/CDP: системная policy `HKLM\\Software\\Policies\\Google\\Chrome\\RemoteDebuggingAllowed = 0` запрещает remote debugging, поэтому порт 9222 не открывается.
 - [x] Зафиксировать, что проект не обходит системную browser policy.
 - [x] Сохранить HTML реальной карточки вручную из обычного Chrome и прогнать через `--html-file`: SKU `2359066702` успешно разобран и сохранён в PostgreSQL, `EXIT_CODE=0`.
-- [ ] На реальном HTML проверить значения всех 12 полей и соответствие карточке. Сейчас подтверждены заполненные `sku`, `title`, `price`, `rating`, `reviews_total`, `cover_image`; `photos_seller`, `videos_seller`, `color`, `material`, `art_set` = NULL, `has_rich_content=false` и требуют проверки по структуре страницы.
+- [ ] На реальном HTML проверить значения всех 12 полей и соответствие карточке. Уже подтверждены реальные `sku`, `title`, `price`, `rating`, `reviews_total`, `cover_image`, `color=Темно-розовый`, `material=Бумага`. Остались `photos_seller`, `videos_seller`, `art_set`, `has_rich_content`; для текущего SKU `art_set` пока отсутствует.
 - [ ] Проверить совместимость User-Agent и cookies.
 - [ ] При необходимости добавить browser-derived headers.
 - [ ] Зафиксировать минимальный набор headers, действительно необходимый для работы.
@@ -219,7 +219,7 @@
 - [x] Зафиксировать базовую структуру сохранённой карточки: один parseable JSON-LD `Product` с ключами `@context,@type,aggregateRating,brand,description,image,name,offers,sku`; дополнительных целевых полей в стандартном JSON-LD нет.
 - [ ] Проверить нестандартные script/state-блоки и rendered DOM расширенным инспектором.
 - [x] Подтвердить по реальному DOM наличие `Цвет` и `Материал`; добавлен DOM-fallback для `color`, `material`, `art_set` с приоритетом JSON над DOM.
-- [ ] Определить реальные источники `photos_seller`, `videos_seller` и `has_rich_content`; script №13 содержит SKU и признаки photo/video/gallery/media/characteristics, но его структура ещё не разобрана.
+- [ ] Определить реальные источники `photos_seller`, `videos_seller` и `has_rich_content`; script №13 содержит SKU и media/gallery/video-ключи. DOM показывает `webGallery`, `webListPhotos`, `webReviewGallery`, `webDescription`, `richTextWidget`; инспектор теперь выводит безопасные структурные счётчики внутри этих widgets.
 - [ ] Обновить extractor adapters.
 
 Обязательные поля для подтверждения:
@@ -231,8 +231,8 @@
 - [ ] `cover_image`
 - [ ] `photos_seller`
 - [ ] `videos_seller`
-- [ ] `color`
-- [ ] `material`
+- [x] `color` — подтверждено на реальном HTML: `Темно-розовый`.
+- [x] `material` — подтверждено на реальном HTML: `Бумага`.
 - [ ] `art_set`
 - [ ] `has_rich_content`
 
