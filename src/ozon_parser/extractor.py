@@ -8,6 +8,31 @@ from bs4 import BeautifulSoup
 
 from .models import Product
 
+MAX_JSON_DEPTH = 20
+MAX_JSON_STRING = 2_000_000
+
+
+def decode_nested_json(value, depth=0):
+    """Decode serialized objects/arrays only; leave ordinary description text intact."""
+    if depth >= MAX_JSON_DEPTH:
+        return value
+    if isinstance(value, str):
+        stripped = value.strip()
+        if len(stripped) > MAX_JSON_STRING or not stripped.startswith(("{", "[")):
+            return value
+        try:
+            decoded = json.loads(stripped)
+        except (ValueError, TypeError):
+            return value
+        if not isinstance(decoded, (dict, list)):
+            return value
+        return decode_nested_json(decoded, depth + 1)
+    if isinstance(value, dict):
+        return {key: decode_nested_json(item, depth + 1) for key, item in value.items()}
+    if isinstance(value, list):
+        return [decode_nested_json(item, depth + 1) for item in value]
+    return value
+
 
 def number(value):
     if value is None or value == "":
@@ -62,6 +87,9 @@ def first(node, *names):
 
 def characteristics(node):
     result = {}
+    # Manufacturer article has priority over set contents or packaging.
+    art_priority = ("артикул производителя", "art set", "комплектация", "состав набора")
+    articles = {}
     for item in walk(node):
         name = str(item.get("name", item.get("title", ""))).lower().strip()
         value = item.get("value", item.get("values"))
@@ -73,11 +101,21 @@ def characteristics(node):
             for field, aliases in {
                 "color": ("цвет", "color"),
                 "material": ("материал", "material"),
-                "art_set": ("артикул производителя", "комплектация", "состав набора", "art set"),
             }.items():
-                if name in aliases:
+                if name in aliases and field not in result:
                     result[field] = str(value)
+            if name in art_priority:
+                articles[name] = str(value)
+    result["art_set"] = next((articles[name] for name in art_priority if name in articles), None)
     return result
+
+
+def offer_price(offers, fallback):
+    """Prefer the first valid explicitly priced offer, then the product price."""
+    for offer in offers if isinstance(offers, list) else [offers]:
+        if isinstance(offer, dict) and (value := number(offer.get("price"))) is not None:
+            return value
+    return number(fallback)
 
 
 def extract_product(html: str, sku: str) -> Product:
@@ -87,7 +125,7 @@ def extract_product(html: str, sku: str) -> Product:
         'script[type="application/ld+json"], script[type="application/json"], script#__NEXT_DATA__'
     ):
         try:
-            states.append(json.loads(script.string or script.get_text()))
+            states.append(decode_nested_json(json.loads(script.string or script.get_text())))
         except (ValueError, TypeError):
             continue
     if not states:
@@ -114,10 +152,6 @@ def extract_product(html: str, sku: str) -> Product:
         raise ValueError("Product title missing in embedded JSON")
     offers = source.get("offers") or {}
     aggregate = source.get("aggregateRating") or {}
-    if isinstance(offers, list):
-        offers = offers[0] if offers else {}
-    if not isinstance(offers, dict):
-        offers = {}
     if not isinstance(aggregate, dict):
         aggregate = {}
     pictures = source.get("image") or source.get("images") or []
@@ -126,7 +160,7 @@ def extract_product(html: str, sku: str) -> Product:
     if isinstance(pictures, dict):
         pictures = [pictures.get("url")]
     details = characteristics(source)
-    price = number(offers.get("price") if offers.get("price") is not None else source.get("price"))
+    price = offer_price(offers, source.get("price"))
     rating = number(
         aggregate.get("ratingValue")
         if aggregate.get("ratingValue") is not None
@@ -139,6 +173,9 @@ def extract_product(html: str, sku: str) -> Product:
     )
     if reviews is not None and reviews != int(reviews):
         raise ValueError("Reviews count must be an integer")
+    # Only widgets explicitly tied to the requested SKU can augment this product.
+    linked = [item for item in matches if item is not source]
+    rich_widgets = [item.get("richContent") for item in linked if "richContent" in item]
     return Product(
         sku=sku,
         title=title.strip(),
@@ -156,5 +193,6 @@ def extract_product(html: str, sku: str) -> Product:
         material=details.get("material"),
         art_set=details.get("art_set"),
         has_rich_content=rich_content(source.get("description"))
-        or rich_content(source.get("richContent")),
+        or rich_content(source.get("richContent"))
+        or any(rich_content(widget) for widget in rich_widgets),
     )
