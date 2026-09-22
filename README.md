@@ -97,6 +97,19 @@ uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.
 
 Live-проверка с импортированными cookies уже показала, что файл сессии корректно читается клиентом, но первый запрос карточки завершился до extractor. Диагностика различает случаи: HTTP 401 означает неавторизованную/истёкшую сессию; HTTP 403 не считается доказательством плохих cookies, потому что Ozon может запрещать именно автоматический HTTP-клиент; antibot-страница сообщается отдельно. В этих случаях запись в PostgreSQL ожидаемо не выполняется.
 
+На текущей live-проверке `requests.Session` получил HTTP 403 при корректно загруженных cookies. Поэтому для честной проверки карточки добавлен отдельный браузерный transport через Playwright. Он использует тот же `cookies.json`, тот же сохранённый User-Agent и тот же `extract_product()`; это не подтверждает автоматический вход через Gmail, а только вторую часть задания с уже готовой авторизованной сессией.
+
+Запуск браузерного транспорта:
+
+```bash
+uv run playwright install chromium
+uv run python scripts/parse_ozon.py 2359066702 \
+  --transport browser \
+  --debug-html-dir output/debug
+```
+
+По умолчанию браузер видимый, чтобы не скрывать возможную проверку Ozon. Для headless режима добавьте `--browser-headless`. Используются `OZON_BROWSER` и `OZON_BROWSER_CHANNEL` из окружения; например, при доступном системном Chrome можно задать `OZON_BROWSER=chromium` и `OZON_BROWSER_CHANNEL=chrome`. Если Playwright также получает antibot/403, это фиксируется как ограничение live-доступа, а не маскируется под ошибку extractor.
+
 ```bash
 uv run python scripts/parse_ozon.py 2359066702 2829800382
 uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.csv
