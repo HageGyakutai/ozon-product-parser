@@ -8,6 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 
+from ozon_parser.browser_client import BrowserProductClient
 from ozon_parser.client import fetch_product, product_session
 from ozon_parser.debug_html import save_debug_html
 from ozon_parser.extractor import extract_product
@@ -23,6 +24,17 @@ def main():
         "--html-file", type=Path, help="Parse one saved HTML page without Ozon access"
     )
     parser.add_argument("--debug-html-dir", type=Path, help="Save redacted live HTML snapshots")
+    parser.add_argument(
+        "--transport",
+        choices=("requests", "browser"),
+        default="requests",
+        help="Live product transport: requests (default) or Playwright browser",
+    )
+    parser.add_argument(
+        "--browser-headless",
+        action="store_true",
+        help="Run browser transport without a visible window",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     if any(not sku.isascii() or not sku.isdecimal() for sku in args.skus):
@@ -33,9 +45,18 @@ def main():
         parser.error("--debug-html-dir is only available in live mode")
     client = None
     if not args.html_file:
+        cookies_file = os.getenv("OZON_COOKIES_FILE", "cookies.json")
         try:
-            client = product_session(os.getenv("OZON_COOKIES_FILE", "cookies.json"))
-        except (OSError, ValueError) as exc:
+            if args.transport == "browser":
+                client = BrowserProductClient(
+                    cookies_file,
+                    browser_name=os.getenv("OZON_BROWSER", "chromium"),
+                    channel=os.getenv("OZON_BROWSER_CHANNEL", "").strip() or None,
+                    headless=args.browser_headless,
+                )
+            else:
+                client = product_session(cookies_file)
+        except (OSError, ValueError, RuntimeError) as exc:
             logging.error("Cannot start parser: %s", exc)
             raise SystemExit(2) from None
     else:
@@ -56,7 +77,12 @@ def main():
         for sku in args.skus:
             try:
                 logging.info("Parsing SKU=%s", sku)
-                html = saved_html if args.html_file else fetch_product(client, sku)
+                if args.html_file:
+                    html = saved_html
+                elif args.transport == "browser":
+                    html = client.fetch_product(sku)
+                else:
+                    html = fetch_product(client, sku)
                 if args.debug_html_dir:
                     save_debug_html(args.debug_html_dir / f"{sku}.html", html)
                 product = extract_product(html, sku)
