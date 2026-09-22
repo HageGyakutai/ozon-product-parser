@@ -190,11 +190,14 @@ def test_dom_characteristics_fill_missing_json_fields():
         "name": "Example",
         "offers": {"price": "100"},
     }
-    page = embedded(state) + """
+    page = (
+        embedded(state)
+        + """
     <dl><dt><span>Цвет</span></dt><dd>Синий</dd></dl>
     <dl><dt><span>Материал</span></dt><dd>Бумага</dd></dl>
     <dl><dt><span>Артикул производителя</span></dt><dd>ABC-42</dd></dl>
     """
+    )
     item = extract_product(page, "123")
     assert (item.color, item.material, item.art_set) == ("Синий", "Бумага", "ABC-42")
 
