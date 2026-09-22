@@ -202,7 +202,7 @@
 - [x] Проверить доступность внешнего Chrome/CDP: системная policy `HKLM\\Software\\Policies\\Google\\Chrome\\RemoteDebuggingAllowed = 0` запрещает remote debugging, поэтому порт 9222 не открывается.
 - [x] Зафиксировать, что проект не обходит системную browser policy.
 - [x] Сохранить HTML реальной карточки вручную из обычного Chrome и прогнать через `--html-file`: SKU `2359066702` успешно разобран и сохранён в PostgreSQL, `EXIT_CODE=0`.
-- [ ] На реальном HTML проверить значения всех 12 полей и соответствие карточке. Уже подтверждены реальные `sku`, `title`, `price`, `rating`, `reviews_total`, `cover_image`, `color=Темно-розовый`, `material=Бумага`. Остались `photos_seller`, `videos_seller`, `art_set`, `has_rich_content`; для текущего SKU `art_set` пока отсутствует.
+- [ ] На реальном HTML проверить значения всех 12 полей и соответствие карточке. Уже подтверждены 11 полей: `sku`, `title`, `price`, `rating`, `reviews_total`, `cover_image`, `photos_seller=19`, `videos_seller=2`, `color=Темно-розовый`, `material=Бумага`, `has_rich_content=true`. Для текущего SKU `art_set` отсутствует; нужен второй реальный SKU с `Артикул производителя` / `Комплектация` / `Состав набора`, только если требуется подтверждение непустого значения.
 - [ ] Проверить совместимость User-Agent и cookies.
 - [ ] При необходимости добавить browser-derived headers.
 - [ ] Зафиксировать минимальный набор headers, действительно необходимый для работы.
@@ -219,7 +219,7 @@
 - [x] Зафиксировать базовую структуру сохранённой карточки: один parseable JSON-LD `Product` с ключами `@context,@type,aggregateRating,brand,description,image,name,offers,sku`; дополнительных целевых полей в стандартном JSON-LD нет.
 - [ ] Проверить нестандартные script/state-блоки и rendered DOM расширенным инспектором.
 - [x] Подтвердить по реальному DOM наличие `Цвет` и `Материал`; добавлен DOM-fallback для `color`, `material`, `art_set` с приоритетом JSON над DOM.
-- [ ] Подтвердить на реальном HTML новые fallback-источники: `state-webGallery-*/data-state` для `photos_seller`/`videos_seller` и структурные медиа внутри `webDescription` для `has_rich_content`. Реализация и unit-тесты добавлены; нужен локальный live-fixture прогон.
+- [x] Подтвердить на реальном HTML fallback-источники: `state-webGallery-*/data-state` дал `images=19`, `videos=2`; `webDescription` содержит 4 изображения и дал `has_rich_content=true`.
 - [ ] Обновить extractor adapters.
 
 Обязательные поля для подтверждения:
@@ -229,12 +229,12 @@
 - [ ] `rating`
 - [ ] `reviews_total`
 - [ ] `cover_image`
-- [ ] `photos_seller`
-- [ ] `videos_seller`
+- [x] `photos_seller` — подтверждено на реальном `state-webGallery`: `images=19`, в PostgreSQL `19`.
+- [x] `videos_seller` — подтверждено на реальном `state-webGallery`: `videos=2`, в PostgreSQL `2`.
 - [x] `color` — подтверждено на реальном HTML: `Темно-розовый`.
 - [x] `material` — подтверждено на реальном HTML: `Бумага`.
 - [ ] `art_set`
-- [ ] `has_rich_content`
+- [x] `has_rich_content` — подтверждено на реальном DOM: `webDescription` содержит изображения, в PostgreSQL `true`.
 
 Критерий готовности:
 - все требуемые поля извлекаются из реальной структуры, а не только из синтетической fixture.
