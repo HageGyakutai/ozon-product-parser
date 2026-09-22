@@ -143,7 +143,7 @@ uv run python scripts/parse_ozon.py 2359066702 \
 4. Выполните `uv run python scripts/parse_ozon.py <SKU> --html-file real-product.html`.
 5. Проверьте строку в PostgreSQL.
 
-На реальном HTML SKU `2359066702` подтверждены успешный INSERT и повторный UPSERT: сохранился тот же `id` и `created_at`, а `updated_at` изменился. После DOM-fallback дополнительно подтверждены `color=Темно-розовый` и `material=Бумага`. Сейчас реально заполнены восемь полей: `sku`, `title`, `price`, `rating`, `reviews_total`, `cover_image`, `color`, `material`. Для `photos_seller`, `videos_seller`, `art_set`, `has_rich_content` ещё требуется подтверждение источника; NULL/false пока не считаются ошибкой без проверки конкретной карточки.
+На реальном HTML SKU `2359066702` подтверждены успешный INSERT и повторный UPSERT: сохранился тот же `id` и `created_at`, а `updated_at` изменился. После DOM-fallback дополнительно подтверждены `color=Темно-розовый` и `material=Бумага`. Сейчас на реальном HTML подтверждены одиннадцать полей: `sku`, `title`, `price`, `rating`, `reviews_total`, `cover_image`, `photos_seller=19`, `videos_seller=2`, `color=Темно-розовый`, `material=Бумага`, `has_rich_content=true`. `photos_seller` и `videos_seller` получены из реального `state-webGallery-*/data-state` (`images=19`, `videos=2`), а `has_rich_content=true` подтверждён наличием изображений внутри `webDescription`. Для этого SKU `art_set` отсутствует; extractor уже умеет читать его из `Артикул производителя` / `Art set` / `Комплектация` / `Состав набора`, но нужен другой реальный SKU с такой характеристикой, если требуется подтверждение непустого значения.
 
 Для безопасного анализа структуры реального HTML без вывода значений используйте:
 
@@ -155,7 +155,7 @@ uv run python scripts/inspect_product_html.py real-product.html 2359066702
 
 На реальной карточке инспектор подтвердил DOM-метки `Цвет` и `Материал`. Extractor теперь использует DOM-fallback для `color`, `material` и `art_set`, если эти поля отсутствуют в выбранном JSON product state. JSON остаётся приоритетным источником. Для media/rich-content требуется дальнейшая проверка внутреннего Ozon state; обновлённый инспектор выводит целевые `SCRIPT_KEYS`, `DOM_WIDGETS` и сводные маркеры без значений.
 
-Для media extractor дополнительно умеет читать JSON из `div[id^="state-webGallery-"][data-state]`: длина массива `images` используется как `photos_seller`, `videos` — как `videos_seller`, если явные поля отсутствуют в основном product state. `has_rich_content` получает DOM-fallback только при наличии медиа/таблиц/списков внутри `webDescription`; простой текст сам по себе rich-content не включает. Эти fallback-и должны быть подтверждены на сохранённом реальном HTML перед финальным статусом.
+Для media extractor дополнительно читает JSON из `div[id^="state-webGallery-"][data-state]`: длина массива `images` используется как `photos_seller`, `videos` — как `videos_seller`, если явные поля отсутствуют в основном product state. На реальном SKU `2359066702` этот путь подтверждён: `images=19`, `videos=2`, и те же значения сохранены в PostgreSQL. `has_rich_content` получает DOM-fallback только при наличии медиа/таблиц/списков внутри `webDescription`; на той же карточке `webDescription` содержит 4 изображения, поэтому в PostgreSQL сохранено `has_rich_content=true`.
 
 ```bash
 uv run python scripts/parse_ozon.py 2359066702 2829800382
