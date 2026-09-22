@@ -152,6 +152,7 @@ def inspect_html(html: str, sku: str, max_lines: int = 350) -> list[str]:
                     )
 
     # Inspect every script, including non-JSON application state, without printing its contents.
+    key_pattern = re.compile(r'["\\\']([A-Za-zА-Яа-я_][A-Za-zА-Яа-я0-9_.-]{1,79})["\\\']\\s*:')
     for script_index, script in enumerate(scripts):
         text = script.string or script.get_text()
         if not text:
@@ -163,6 +164,28 @@ def inspect_html(html: str, sku: str, max_lines: int = 350) -> list[str]:
                 f"SCRIPT_SCAN script={script_index} type={_script_type(script)} "
                 f"contains_sku={str(contains_sku).lower()} keywords={','.join(hits) or '-'}"
             )
+            interesting_keys = sorted(
+                {
+                    key
+                    for key in key_pattern.findall(text)
+                    if INTERESTING_KEY.search(key)
+                    or key.casefold()
+                    in {
+                        "state",
+                        "widgetstate",
+                        "characteristics",
+                        "attributes",
+                        "items",
+                        "sku",
+                        "productid",
+                    }
+                }
+            )
+            if interesting_keys:
+                emit(
+                    f"SCRIPT_KEYS script={script_index} keys="
+                    + ",".join(interesting_keys[:80])
+                )
 
     # Look for rendered characteristic labels without printing adjacent values.
     for element in soup.find_all(string=True):
@@ -178,18 +201,30 @@ def inspect_html(html: str, sku: str, max_lines: int = 350) -> list[str]:
             f"path={_safe_dom_path(parent)} attrs={attrs or '-'}"
         )
 
-    # Report only names of interesting DOM attributes, never their values.
-    for element in soup.find_all(True):
-        interesting_attrs = [
-            name
-            for name in element.attrs
-            if INTERESTING_KEY.search(str(name)) or str(name).startswith("data-")
-        ]
-        if interesting_attrs:
-            emit(
-                f"DOM_ATTR tag={element.name} path={_safe_dom_path(element)} "
-                f"attrs={','.join(sorted(interesting_attrs))}"
-            )
+    # Summarize widget names rather than printing hundreds of generic data-* attributes.
+    widget_counts = Counter()
+    for element in soup.select("[data-widget]"):
+        value = element.get("data-widget")
+        if isinstance(value, str) and value.strip():
+            widget_counts[value.strip()] += 1
+    interesting_widgets = [
+        (name, count)
+        for name, count in widget_counts.most_common()
+        if re.search(
+            r"product|gallery|photo|video|media|character|attribute|description|rich|content",
+            name,
+            re.I,
+        )
+    ]
+    if interesting_widgets:
+        emit(
+            "DOM_WIDGETS "
+            + ",".join(f"{name}:{count}" for name, count in interesting_widgets[:80])
+        )
+
+    indexed_nodes = soup.select("[data-index]")
+    if indexed_nodes:
+        emit(f"dom_indexed_nodes={len(indexed_nodes)}")
 
     # Global presence counters are useful when a value is rendered as text but not structured JSON.
     for name, pattern in SCRIPT_KEYWORDS.items():
