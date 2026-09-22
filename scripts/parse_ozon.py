@@ -25,8 +25,8 @@ def main():
     parser.add_argument("--debug-html-dir", type=Path, help="Save redacted live HTML snapshots")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    if any(not sku.isdecimal() for sku in args.skus):
-        parser.error("Each SKU must be numeric")
+    if any(not sku.isascii() or not sku.isdecimal() for sku in args.skus):
+        parser.error("Each SKU must contain ASCII digits")
     if args.html_file and len(args.skus) != 1:
         parser.error("--html-file requires exactly one SKU")
     if args.html_file and args.debug_html_dir:
