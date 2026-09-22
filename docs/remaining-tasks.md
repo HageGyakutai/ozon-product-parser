@@ -189,7 +189,9 @@
 
 ### 9. Проверить перенос cookies browser → requests
 
-- [ ] Загрузить реальные cookies.
+Промежуточно подтверждено локально: экспорт cookies из обычного Chrome успешно преобразован через `scripts/import_browser_cookies.py`; создан `cookies.json`, а `product_session()` принял 10 пригодных Ozon cookies. Это подтверждает импорт готовой браузерной сессии, но ещё не подтверждает доступ к карточкам через requests и не подтверждает автоматический вход через Gmail.
+
+- [x] Загрузить реальные cookies из обычного Chrome в формат parser session.
 - [ ] Запросить реальную карточку через requests.Session.
 - [ ] Проверить отсутствие redirect на login.
 - [ ] Проверить отсутствие antibot response.
