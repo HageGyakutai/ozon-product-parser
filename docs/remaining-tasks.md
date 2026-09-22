@@ -216,7 +216,8 @@
 - [ ] Сохранить локальную обезличенную fixture.
 - [ ] Не коммитить чувствительные session/account данные.
 - [x] Подтвердить, что текущий extractor на реальном HTML находит распознаваемый product state для SKU `2359066702`.
-- [ ] Зафиксировать структуру Ozon widgets/state.
+- [x] Зафиксировать базовую структуру сохранённой карточки: один parseable JSON-LD `Product` с ключами `@context,@type,aggregateRating,brand,description,image,name,offers,sku`; дополнительных целевых полей в стандартном JSON-LD нет.
+- [ ] Проверить нестандартные script/state-блоки и rendered DOM расширенным инспектором.
 - [ ] Определить реальные пути до отсутствующих/неподтверждённых полей; добавлен безопасный `scripts/inspect_product_html.py`, который выводит структуру без значений.
 - [ ] Обновить extractor adapters.
 
