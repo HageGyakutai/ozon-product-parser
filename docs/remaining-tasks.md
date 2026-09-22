@@ -192,10 +192,12 @@
 Промежуточно подтверждено локально: экспорт cookies из обычного Chrome успешно преобразован через `scripts/import_browser_cookies.py`; создан `cookies.json`, а `product_session()` принял 10 пригодных Ozon cookies. Это подтверждает импорт готовой браузерной сессии, но ещё не подтверждает доступ к карточкам через requests и не подтверждает автоматический вход через Gmail.
 
 - [x] Загрузить реальные cookies из обычного Chrome в формат parser session.
-- [x] Выполнить первый реальный запрос карточки через requests.Session: запрос дошёл до Ozon, но завершился HTTP 401/403 до extractor; предыдущая версия клиента не различала эти статусы.
-- [ ] Повторить запрос после обновлённой диагностики и определить точный класс ответа: 401 / 403 forbidden / 403 antibot.
-- [ ] Проверить отсутствие redirect на login.
-- [ ] Проверить отсутствие antibot response.
+- [x] Выполнить первый реальный запрос карточки через requests.Session.
+- [x] Определить точный результат requests transport: HTTP 403 forbidden до extractor при корректно загруженных cookies.
+- [x] Добавить отдельный Playwright browser transport, использующий тот же session file и extractor.
+- [ ] Выполнить реальный запрос карточки через `--transport browser`.
+- [ ] Проверить отсутствие redirect на login в browser transport.
+- [ ] Проверить отсутствие antibot/403 response в browser transport.
 - [ ] Проверить совместимость User-Agent и cookies.
 - [ ] При необходимости добавить browser-derived headers.
 - [ ] Зафиксировать минимальный набор headers, действительно необходимый для работы.
