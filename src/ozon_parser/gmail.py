@@ -66,7 +66,7 @@ def gmail_service(credentials_file: str, token_file: str):
         else:
             credentials = InstalledAppFlow.from_client_secrets_file(
                 credentials_file, scopes
-            ).run_local_server(port=0)
+            ).run_local_server(port=0, open_browser=not bool(os.getenv("WSL_DISTRO_NAME")))
         token.write_text(credentials.to_json(), encoding="utf-8")
         token.chmod(0o600)
     return build("gmail", "v1", credentials=credentials)
