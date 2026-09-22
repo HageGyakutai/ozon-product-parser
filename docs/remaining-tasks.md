@@ -137,19 +137,19 @@
 Примечание: offline-тесты проверяют, что cookies не сохраняются при ошибке и сохраняются после успешного возврата `authenticate()`. Реальный защищённый признак успешного входа пока неизвестен; проверка остаётся открытой вместе с P1/8.\n\nКритерий готовности:
 - основные CLI сценарии проверяются автоматически без live Ozon.
 
-### 6. Обновить документацию
+### 6. Обновить документацию\n\nОбновлено после локальной проверки: Ruff, `ruff format --check .`, 75 passed, 10 skipped без PostgreSQL. Результат CI после последнего коммита ещё не подтверждён.
 
-- [ ] Обновить `docs/task-audit.md`: CI уже подтверждён.
-- [ ] Обновить README со статусом PostgreSQL/Alembic/tests.
-- [ ] Явно разделить:
+- [x] Обновить `docs/task-audit.md`: CI уже подтверждён.
+- [x] Обновить README со статусом PostgreSQL/Alembic/tests.
+- [x] Явно разделить:
   - подтверждено автоматически;
   - требует live Ozon;
   - optional/bonus.
-- [ ] Описать session metadata / User-Agent.
-- [ ] Описать offline HTML mode.
-- [ ] Описать безопасную работу с OAuth token / cookies.
-- [ ] Указать точную последовательность локального запуска.
-- [ ] Указать точную последовательность финальной end-to-end проверки.
+- [x] Описать session metadata / User-Agent.
+- [x] Описать offline HTML mode.
+- [x] Описать безопасную работу с OAuth token / cookies.
+- [x] Указать точную последовательность локального запуска.
+- [x] Указать точную последовательность финальной end-to-end проверки.
 
 ---
 
@@ -295,7 +295,7 @@
 3. [x] Nested JSON extractor.
 4. [x] Offline HTML mode.
 5. [x] CLI tests (кроме live подтверждения входа).
-6. [ ] README + task-audit update.
+6. [x] README + task-audit update.
 7. [ ] Real Gmail OAuth.
 8. [ ] Real Ozon login.
 9. [ ] Browser → requests session validation.
