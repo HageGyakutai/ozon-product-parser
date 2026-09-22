@@ -32,15 +32,7 @@ docker compose up --build --exit-code-from migrate migrate
 
 При запуске парсера контейнер читает локальный `cookies.json` только для чтения. Файл не копируется в Docker-образ. Без действительных cookies или при отказе Ozon парсер завершится ошибкой.
 
-Альтернативно для запуска парсера непосредственно в WSL:
-
-```bash
-docker compose up -d postgres
-# дождитесь статуса healthy: docker compose ps
-uv run alembic upgrade head
-```
-
-В `.env` установите `DATABASE_URL=postgresql+psycopg://ozon:local_only_change_me@localhost:5432/ozon`. PostgreSQL 16, SQLAlchemy 2, psycopg 3; миграция создаёт `products` с уникальным индексом `sku`, NUMERIC для цены и рейтинга, nullable характеристиками и timestamptz для дат. Повторное сохранение выполняет `ON CONFLICT (sku) DO UPDATE`.
+При локальном запуске Python вне Compose в `.env` установите `DATABASE_URL=postgresql+psycopg://ozon:local_only_change_me@localhost:5432/ozon`. PostgreSQL 16, SQLAlchemy 2, psycopg 3; миграция создаёт `products` с уникальным индексом `sku`, NUMERIC для цены и рейтинга, nullable характеристиками и timestamptz для дат. Повторное сохранение выполняет `ON CONFLICT (sku) DO UPDATE`.
 
 ## Авторизация и Gmail
 
