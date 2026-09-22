@@ -73,8 +73,13 @@ def gmail_service(credentials_file: str, token_file: str):
 
 
 def wait_for_code(
-    service, since: datetime, timeout: int = 180, interval: int = 5,
-    *, query: str | None = None, sender_domains: tuple[str, ...] | None = None,
+    service,
+    since: datetime,
+    timeout: int = 180,
+    interval: int = 5,
+    *,
+    query: str | None = None,
+    sender_domains: tuple[str, ...] | None = None,
 ) -> str:
     if since.tzinfo is None:
         raise ValueError("since must include timezone")
@@ -82,12 +87,12 @@ def wait_for_code(
         raise ValueError("timeout and interval must be positive")
     if sender_domains is None:
         sender_domains = tuple(
-            domain.strip().lower() for domain in
-            os.getenv("GMAIL_SENDER_DOMAINS", "ozon.ru").split(",") if domain.strip()
+            domain.strip().lower()
+            for domain in os.getenv("GMAIL_SENDER_DOMAINS", "ozon.ru").split(",")
+            if domain.strip()
         )
     if not sender_domains or any(
-        not re.fullmatch(r"[a-z0-9-]+(?:\.[a-z0-9-]+)+", domain)
-        for domain in sender_domains
+        not re.fullmatch(r"[a-z0-9-]+(?:\.[a-z0-9-]+)+", domain) for domain in sender_domains
     ):
         raise ValueError("GMAIL_SENDER_DOMAINS must list valid DNS domains")
     if query is None:
