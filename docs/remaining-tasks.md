@@ -19,7 +19,7 @@
 
 Не подтверждено:
 - [ ] Реальный login на `data.ozon.ru`.
-- [ ] Реальное получение кода через Gmail API.
+- [ ] Реальное получение письма с кодом Ozon через Gmail API (OAuth и запрос `users.getProfile` уже подтверждены).
 - [ ] Пригодность сохранённых cookies для запросов карточек.
 - [ ] Фактическая структура JSON в живой карточке Ozon.
 - [ ] Извлечение всех требуемых полей из реальной карточки.
@@ -157,13 +157,13 @@
 
 ### 7. Проверить Gmail OAuth на реальном аккаунте
 
-Подготовлено: `scripts/check_gmail.py` проверяет действующий OAuth-токен через `users.getProfile`; `--wait-for-code` проверяет получение нового кода без вывода его значения. Локально 79 passed, 10 PostgreSQL-тестов skipped. Реальные OAuth и письмо остаются непроверенными: `credentials.json` и `token.json` в рабочем окружении отсутствуют.
+Реальный OAuth Desktop Client настроен пользователем: `scripts/check_gmail.py` успешно выполнил `users.getProfile` через Gmail API (`INFO Gmail API access confirmed; OAuth token is usable`). `--wait-for-code` и фактическое письмо Ozon ещё не проверялись. `credentials.json` и `token.json` хранятся только в окружении пользователя, не в репозитории.
 
-- [ ] Создать/подключить Google Cloud OAuth Desktop Client.
-- [ ] Включить Gmail API.
-- [ ] Получить `credentials.json`.
-- [ ] Выполнить первый OAuth login.
-- [ ] Проверить создание `token.json`.
+- [x] Создать/подключить Google Cloud OAuth Desktop Client.
+- [x] Включить Gmail API и подтвердить доступ запросом `users.getProfile`.
+- [x] Получить `credentials.json` (на машине пользователя).
+- [x] Выполнить первый OAuth login.
+- [ ] Проверить наличие `token.json` на машине пользователя (запрос с рабочим токеном подтверждён).
 - [ ] Проверить получение именно нового письма Ozon.
 - [ ] Подтвердить реальный формат From / Subject / MIME / verification code.
 - [ ] Скорректировать Gmail filters по реальным данным.
@@ -298,7 +298,7 @@
 4. [x] Offline HTML mode.
 5. [x] CLI tests (кроме live подтверждения входа).
 6. [x] README + task-audit update.
-7. [ ] Real Gmail OAuth.
+7. [ ] Real Gmail OAuth подтверждён; осталось проверить новое письмо Ozon и его формат.
 8. [ ] Real Ozon login.
 9. [ ] Browser → requests session validation.
 10. [ ] Real HTML fixture + final extractor mapping.
