@@ -247,6 +247,38 @@ def inspect_html(html: str, sku: str, max_lines: int = 350) -> list[str]:
                 f"text_chars={len(element.get_text(' ', strip=True))}"
             )
 
+    # Parse selected Ozon widget data-state attributes without printing their values.
+    for widget_name in ("webGallery", "webDescription", "webListPhotos", "webReviewGallery"):
+        for occurrence, element in enumerate(
+            soup.select(f'div[id^="state-{widget_name}-"][data-state]'),
+            start=1,
+        ):
+            raw = element.get("data-state")
+            parsed = None
+            if isinstance(raw, str) and raw.strip():
+                try:
+                    parsed = decode_nested_json(json.loads(raw))
+                except (ValueError, TypeError):
+                    parsed = None
+            if isinstance(parsed, dict):
+                keys = ",".join(sorted(str(key) for key in parsed))
+                counts = []
+                for key in ("images", "videos", "photos", "items", "content"):
+                    value = parsed.get(key)
+                    if isinstance(value, list):
+                        counts.append(f"{key}={len(value)}")
+                    elif isinstance(value, dict):
+                        counts.append(f"{key}=dict[{len(value)}]")
+                emit(
+                    f"STATE_WIDGET name={widget_name} occurrence={occurrence} "
+                    f"keys={keys or '-'} counts={','.join(counts) or '-'}"
+                )
+            else:
+                emit(
+                    f"STATE_WIDGET name={widget_name} occurrence={occurrence} "
+                    "parseable=false"
+                )
+
     indexed_nodes = soup.select("[data-index]")
     if indexed_nodes:
         emit(f"dom_indexed_nodes={len(indexed_nodes)}")
