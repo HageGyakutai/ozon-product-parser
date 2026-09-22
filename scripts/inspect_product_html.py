@@ -11,9 +11,7 @@ from bs4 import BeautifulSoup
 from ozon_parser.extractor import decode_nested_json
 
 SCRIPT_SELECTOR = (
-    'script[type="application/ld+json"], '
-    'script[type="application/json"], '
-    'script#__NEXT_DATA__'
+    'script[type="application/ld+json"], script[type="application/json"], script#__NEXT_DATA__'
 )
 
 INTERESTING_KEY = re.compile(
