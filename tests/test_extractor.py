@@ -1,12 +1,24 @@
 import json
 from decimal import Decimal
+
 import pytest
-from ozon_parser.extractor import extract_product, number, rich_content
+
+from ozon_parser.extractor import extract_product, number
 
 
 def html(description="Text"):
-    data = {"@context": "https://schema.org", "@type": "Product", "sku": "123", "name": "Example", "offers": {"price": "1 999,50"}, "aggregateRating": {"ratingValue": "4.7", "reviewCount": "12"}, "image": ["https://example.org/p.jpg"], "description": description, "characteristics": [{"name": "Цвет", "value": "Красный"}]}
-    return '<script type="application/ld+json">' + json.dumps(data) + '</script>'
+    data = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "sku": "123",
+        "name": "Example",
+        "offers": {"price": "1 999,50"},
+        "aggregateRating": {"ratingValue": "4.7", "reviewCount": "12"},
+        "image": ["https://example.org/p.jpg"],
+        "description": description,
+        "characteristics": [{"name": "Цвет", "value": "Красный"}],
+    }
+    return '<script type="application/ld+json">' + json.dumps(data) + "</script>"
 
 
 def test_product():
@@ -20,7 +32,9 @@ def test_product():
     assert item.has_rich_content is False
 
 
-@pytest.mark.parametrize("element", ["<img src='x'>", "<table><tr></tr></table>", "<ul><li>x</li></ul>"])
+@pytest.mark.parametrize(
+    "element", ["<img src='x'>", "<table><tr></tr></table>", "<ul><li>x</li></ul>"]
+)
 def test_rich(element):
     assert extract_product(html(element), "123").has_rich_content
 
