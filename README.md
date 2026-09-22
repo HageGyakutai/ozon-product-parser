@@ -82,6 +82,17 @@ uv run python scripts/get_cookies.py
 
 ## Парсинг
 
+### Проверка с cookies из обычного браузера
+
+Если автоматизированный вход остановился на проверке браузера, можно отдельно проверить **парсинг карточек** с собственной сессией. Войдите в Ozon обычным браузером и сохраните cookies для `ozon.ru` и его поддоменов как локальный JSON-массив объектов с `name`, `value`, `domain`, `path`, `secure` и `expirationDate` (или `expires`). Не используйте `document.cookie`: он не видит HttpOnly cookies. Сохраните экспорт как `browser-cookies.json` в корне проекта. В консоли того же браузера выполните `navigator.userAgent` и скопируйте значение:
+
+```bash
+uv run python scripts/import_browser_cookies.py browser-cookies.json --user-agent 'строка navigator.userAgent'
+uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.csv
+```
+
+Экспорт и `cookies.json` держите только локально, никому не отправляйте; после проверки удалите экспорт. Скрипт фильтрует домены Ozon и проверяет срок cookies перед сохранением с правами доступа владельца. Даже настоящие cookies могут не дать доступ через `requests.Session`, если Ozon проверяет браузер: парсер сообщит об ошибке. Успешный парсинг через импорт подтвердит вторую часть ТЗ, но вход по телефону и Gmail-коду останется отдельной проверкой.
+
 ```bash
 uv run python scripts/parse_ozon.py 2359066702 2829800382
 uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.csv
