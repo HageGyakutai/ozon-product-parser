@@ -53,6 +53,7 @@ def main():
                     browser_name=os.getenv("OZON_BROWSER", "chromium"),
                     channel=os.getenv("OZON_BROWSER_CHANNEL", "").strip() or None,
                     headless=args.browser_headless,
+                    cdp_endpoint=os.getenv("OZON_CDP_ENDPOINT", "").strip() or None,
                 )
             else:
                 client = product_session(cookies_file)
