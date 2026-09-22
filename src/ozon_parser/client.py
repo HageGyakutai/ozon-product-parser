@@ -91,9 +91,8 @@ def product_session(cookies_file: str = "cookies.json") -> requests.Session:
 
 def fetch_product(session: requests.Session, sku: str) -> str:
     response = session.get(f"https://www.ozon.ru/product/{sku}/", timeout=20)
-    blocked = (
-        "antibot challenge" in response.text[:10000].casefold()
-        or blocked_page_text(response.text)
+    blocked = "antibot challenge" in response.text[:10000].casefold() or blocked_page_text(
+        response.text
     )
     if blocked:
         raise ValueError(
