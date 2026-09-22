@@ -13,4 +13,14 @@ jobs:
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uv run pytest -q
+      - name: Start healthy PostgreSQL and run Alembic
+        run: docker compose up --build --exit-code-from migrate migrate
+      - name: Check migrated table and create isolated test database
+        run: |
+          docker compose up -d --wait postgres
+          docker compose exec -T postgres psql -U ozon -d ozon -Atc "SELECT to_regclass('public.products')" | grep -qx products
+          docker compose exec -T postgres createdb -U ozon ozon_test
+      - name: Run tests against PostgreSQL
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://ozon:local_only_change_me@localhost:5432/ozon_test
+        run: uv run pytest -q
