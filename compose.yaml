@@ -14,5 +14,25 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+  migrate:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://ozon:local_only_change_me@postgres:5432/ozon
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+  parser:
+    build: .
+    profiles: ["parse"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://ozon:local_only_change_me@postgres:5432/ozon
+      OZON_COOKIES_FILE: /app/cookies.json
+    volumes:
+      - ./cookies.json:/app/cookies.json:ro
+    entrypoint: ["python", "scripts/parse_ozon.py"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 volumes:
   postgres_data:
