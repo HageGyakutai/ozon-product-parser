@@ -46,3 +46,14 @@ def test_no_json():
 
 def test_number():
     assert number("1 999 ₽") == Decimal(1999)
+
+
+def test_rejects_wrong_sku():
+    with pytest.raises(ValueError, match="SKU=123"):
+        extract_product(html().replace('"sku": "123"', '"sku": "456"'), "123")
+
+
+def test_chooses_requested_product_from_multiple_json_scripts():
+    item = extract_product(html().replace('"sku": "123"', '"sku": "456"') + html(), "123")
+    assert item.sku == "123"
+    assert item.price == Decimal("1999.50")
