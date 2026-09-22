@@ -225,3 +225,24 @@ def test_parser_partial_failure_exit_1_and_csv_only_contains_success(monkeypatch
     assert [product.sku for product in saved] == ["456"]
     with csv_path.open(encoding="utf-8-sig", newline="") as stream:
         assert [row["sku"] for row in csv.DictReader(stream)] == ["456"]
+
+
+def test_parser_browser_transport_uses_browser_client(monkeypatch):
+    saved = []
+    browser_client = ContextManager()
+    browser_client.fetch_product = lambda sku: f"HTML for {sku}"
+
+    monkeypatch.setattr(parse, "BrowserProductClient", lambda *args, **kwargs: browser_client)
+    monkeypatch.setattr(
+        parse,
+        "fetch_product",
+        lambda *args, **kwargs: pytest.fail("requests transport used"),
+    )
+    monkeypatch.setattr(parse, "extract_product", lambda html, sku: Product(sku, f"Item {sku}"))
+    monkeypatch.setattr(parse, "save_product", lambda db, product: saved.append(product))
+    monkeypatch.setattr(parse, "Session", lambda engine: ContextManager())
+    monkeypatch.setattr(parse, "database_engine", lambda: SimpleNamespace(dispose=lambda: None))
+    monkeypatch.setattr(sys, "argv", ["parse_ozon.py", "123", "--transport", "browser"])
+
+    assert parse.main() is None
+    assert [product.sku for product in saved] == ["123"]
