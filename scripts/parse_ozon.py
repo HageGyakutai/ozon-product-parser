@@ -63,15 +63,21 @@ def main():
                 save_product(db, product)
                 products.append(product)
                 logging.info("Saved SKU=%s", sku)
+            except (ValueError, OSError) as exc:
+                logging.error("Failed SKU=%s: %s", sku, exc)
             except Exception:
-                logging.exception("Failed SKU=%s", sku)
+                logging.exception("Unexpected failure for SKU=%s", sku)
     if args.csv and products:
         args.csv.parent.mkdir(parents=True, exist_ok=True)
         with args.csv.open("w", encoding="utf-8-sig", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=list(vars(products[0])))
             writer.writeheader()
             writer.writerows(vars(item) for item in products)
+        logging.info("CSV exported: %s rows", len(products))
     engine.dispose()
+    logging.info(
+        "Parsing complete: %s saved, %s failed", len(products), len(args.skus) - len(products)
+    )
     if len(products) != len(args.skus):
         raise SystemExit(1)
 
