@@ -35,6 +35,8 @@ def import_cookies(source: Path, destination: Path, user_agent: str) -> int:
         save_browser_session(candidate, cookies, user_agent)
         with product_session(str(candidate)) as session:
             count = len(session.cookies)
+    if destination.is_dir():
+        raise ValueError(f"{destination} is a directory; remove the empty directory with rmdir")
     save_browser_session(destination, cookies, user_agent)
     return count
 
