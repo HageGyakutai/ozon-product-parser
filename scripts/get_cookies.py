@@ -1,6 +1,5 @@
 """Automated Ozon phone login using a new Gmail verification message."""
 
-import json
 import logging
 import os
 import re
@@ -13,6 +12,7 @@ from playwright.sync_api import sync_playwright
 
 from ozon_parser.auth_guard import blocked_page_text
 from ozon_parser.gmail import gmail_service, wait_for_code
+from ozon_parser.session_data import ozon_cookie_domain, save_browser_session
 
 LOGGER = logging.getLogger(__name__)
 
@@ -97,15 +97,17 @@ def main() -> None:
             context = browser.new_context(locale="ru-RU")
             authenticate(context, phone, gmail)
             cookies = [
-                cookie
-                for cookie in context.cookies()
-                if cookie.get("domain", "").endswith("ozon.ru")
+                cookie for cookie in context.cookies()
+                if ozon_cookie_domain(cookie.get("domain"))
             ]
             if not cookies:
                 raise RuntimeError("No Ozon cookies found after authentication")
             path = Path(os.getenv("OZON_COOKIES_FILE", "cookies.json"))
-            path.write_text(json.dumps(cookies), encoding="utf-8")
-            path.chmod(0o600)
+            page = current_page(context)
+            if page is None:
+                raise RuntimeError("Browser page closed before session could be saved")
+            user_agent = page.evaluate("navigator.userAgent")
+            save_browser_session(path, cookies, user_agent)
             LOGGER.info("Ozon login completed; cookies saved")
         finally:
             browser.close()
