@@ -31,16 +31,16 @@
 
 ### 1. Hardening браузерной сессии и cookies
 
-- [ ] Сохранять User-Agent браузера, в котором выполнялась авторизация.
-- [ ] Убрать жёстко заданный Linux Chrome User-Agent из `product_session()`.
-- [ ] Использовать при parsing тот же User-Agent, с которым получена браузерная сессия.
-- [ ] Сохранять необходимые cookie-атрибуты: `domain`, `path`, `secure`, `expires`.
-- [ ] Игнорировать явно истёкшие cookies.
-- [ ] Проверить границы домена `ozon.ru` и поддоменов.
-- [ ] Добавить unit tests на перенос cookies и browser session metadata.
-- [ ] Не логировать значения cookies, verification code и номер телефона.
+- [x] Сохранять User-Agent браузера, в котором выполнялась авторизация.
+- [x] Убрать жёстко заданный Linux Chrome User-Agent из `product_session()`.
+- [x] Использовать при parsing тот же User-Agent, с которым получена браузерная сессия.
+- [x] Сохранять необходимые cookie-атрибуты: `domain`, `path`, `secure`, `expires`.
+- [x] Игнорировать явно истёкшие cookies.
+- [x] Проверить границы домена `ozon.ru` и поддоменов.
+- [x] Добавить unit tests на перенос cookies и browser session metadata.
+- [x] Не логировать значения cookies, verification code и номер телефона.
 
-Критерий готовности:
+Примечание: старый формат списка cookies читается с User-Agent по умолчанию `requests`; совпадение User-Agent с браузером гарантируется для нового формата. Реальная совместимость с Ozon требует live-проверки.\n\nКритерий готовности:
 - cookies/session metadata сериализуются безопасно;
 - requests-клиент воспроизводит браузерные заголовки;
 - тесты проверяют валидные, истёкшие и чужие cookies.
@@ -290,7 +290,7 @@
 
 ## Рекомендуемый порядок выполнения
 
-1. [ ] Session/cookies hardening.
+1. [x] Session/cookies hardening.
 2. [ ] Gmail adapter tests/hardening.
 3. [ ] Nested JSON extractor.
 4. [ ] Offline HTML mode.
