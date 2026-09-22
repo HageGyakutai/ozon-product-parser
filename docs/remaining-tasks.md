@@ -219,7 +219,7 @@
 - [x] Зафиксировать базовую структуру сохранённой карточки: один parseable JSON-LD `Product` с ключами `@context,@type,aggregateRating,brand,description,image,name,offers,sku`; дополнительных целевых полей в стандартном JSON-LD нет.
 - [ ] Проверить нестандартные script/state-блоки и rendered DOM расширенным инспектором.
 - [x] Подтвердить по реальному DOM наличие `Цвет` и `Материал`; добавлен DOM-fallback для `color`, `material`, `art_set` с приоритетом JSON над DOM.
-- [ ] Определить реальные источники `photos_seller`, `videos_seller` и `has_rich_content`; script №13 содержит SKU и media/gallery/video-ключи. DOM показывает `webGallery`, `webListPhotos`, `webReviewGallery`, `webDescription`, `richTextWidget`; инспектор теперь выводит безопасные структурные счётчики внутри этих widgets.
+- [ ] Подтвердить на реальном HTML новые fallback-источники: `state-webGallery-*/data-state` для `photos_seller`/`videos_seller` и структурные медиа внутри `webDescription` для `has_rich_content`. Реализация и unit-тесты добавлены; нужен локальный live-fixture прогон.
 - [ ] Обновить extractor adapters.
 
 Обязательные поля для подтверждения:
