@@ -43,9 +43,10 @@ def test_inspector_outputs_structure_without_values():
     assert "MATCH" in output
     assert "key=image" in output
     assert "SCRIPT_SCAN" in output
+    assert "SCRIPT_KEYS" in output
     assert "keywords=video,gallery,media,rich,material" in output or "material" in output
     assert "DOM_LABEL label=цвет" in output
-    assert "DOM_ATTR" in output
+    assert "DOM_WIDGETS" in output or "dom_indexed_nodes=" in output
     assert "HTML_MARKER name=rich" in output
     assert secret not in output
 
