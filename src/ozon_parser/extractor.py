@@ -110,6 +110,85 @@ def characteristics(node):
     return result
 
 
+DOM_CHARACTERISTIC_ALIASES = {
+    "color": ("цвет", "color"),
+    "material": ("материал", "material"),
+}
+DOM_ART_PRIORITY = ("артикул производителя", "art set", "комплектация", "состав набора")
+
+
+def _clean_text(value: str) -> str:
+    return " ".join(value.split()).strip()
+
+
+def dom_characteristics(soup: BeautifulSoup) -> dict[str, str | None]:
+    """Read rendered product characteristics when Ozon JSON-LD omits them."""
+    result: dict[str, str | None] = {}
+    articles: dict[str, str] = {}
+
+    for dl in soup.find_all("dl"):
+        dt = dl.find("dt")
+        dd = dl.find("dd")
+        if dt is None or dd is None:
+            continue
+        name = _clean_text(dt.get_text(" ", strip=True)).casefold()
+        value = _clean_text(dd.get_text(" ", strip=True))
+        if not name or not value:
+            continue
+        for field, aliases in DOM_CHARACTERISTIC_ALIASES.items():
+            if name in aliases and field not in result:
+                result[field] = value
+        if name in DOM_ART_PRIORITY and name not in articles:
+            articles[name] = value
+
+    # Ozon may render a label/value pair as adjacent generic blocks instead of dl/dt/dd.
+    wanted_labels = {
+        alias
+        for aliases in DOM_CHARACTERISTIC_ALIASES.values()
+        for alias in aliases
+    } | set(DOM_ART_PRIORITY)
+    for text_node in soup.find_all(string=True):
+        label = _clean_text(str(text_node)).casefold()
+        if label not in wanted_labels:
+            continue
+        parent = text_node.parent
+        if parent is None:
+            continue
+
+        candidates = []
+        current = parent
+        for _ in range(4):
+            sibling = current.find_next_sibling()
+            if sibling is not None:
+                candidates.append(sibling)
+            current = current.parent
+            if current is None:
+                break
+
+        value = next(
+            (
+                _clean_text(candidate.get_text(" ", strip=True))
+                for candidate in candidates
+                if _clean_text(candidate.get_text(" ", strip=True))
+                and _clean_text(candidate.get_text(" ", strip=True)).casefold() != label
+            ),
+            None,
+        )
+        if not value:
+            continue
+        for field, aliases in DOM_CHARACTERISTIC_ALIASES.items():
+            if label in aliases and field not in result:
+                result[field] = value
+        if label in DOM_ART_PRIORITY and label not in articles:
+            articles[label] = value
+
+    result["art_set"] = next(
+        (articles[name] for name in DOM_ART_PRIORITY if name in articles),
+        None,
+    )
+    return result
+
+
 def offer_price(offers, fallback):
     """Prefer the first valid explicitly priced offer, then the product price."""
     for offer in offers if isinstance(offers, list) else [offers]:
@@ -160,6 +239,10 @@ def extract_product(html: str, sku: str) -> Product:
     if isinstance(pictures, dict):
         pictures = [pictures.get("url")]
     details = characteristics(source)
+    dom_details = dom_characteristics(soup)
+    for field in ("color", "material", "art_set"):
+        if not details.get(field) and dom_details.get(field):
+            details[field] = dom_details[field]
     price = offer_price(offers, source.get("price"))
     rating = number(
         aggregate.get("ratingValue")
