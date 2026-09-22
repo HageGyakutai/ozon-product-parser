@@ -1,76 +1,101 @@
-"""Interactive Ozon login and optional Gmail code polling."""
+"""Automated Ozon phone login using a new Gmail verification message."""
 
-import argparse
 import json
 import logging
 import os
-import threading
+import re
 from datetime import UTC, datetime
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 from ozon_parser.auth_guard import blocked_page_text
 from ozon_parser.gmail import gmail_service, wait_for_code
 
-
-def ensure_not_blocked(pages) -> None:
-    for current in pages:
-        if not current.is_closed() and blocked_page_text(current.locator("body").inner_text()):
-            raise RuntimeError("Ozon denied access in this browser. Cookies were not saved.")
+LOGGER = logging.getLogger(__name__)
 
 
-def main():
-    load_dotenv()
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--gmail",
-        action="store_true",
-        help="Poll Gmail and show the new verification code privately in terminal",
-    )
-    args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+def ensure_not_blocked(context) -> None:
+    for page in context.pages:
+        if not page.is_closed() and blocked_page_text(page.locator("body").inner_text()):
+            raise RuntimeError("Ozon refused this browser. No cookies saved; see incident on page.")
+
+
+def current_page(context):
+    return next((page for page in reversed(context.pages) if not page.is_closed()), None)
+
+
+def authenticate(context, phone: str, gmail) -> None:
+    page = current_page(context)
+    page.goto("https://data.ozon.ru/", wait_until="domcontentloaded", timeout=30000)
+    ensure_not_blocked(context)
+    page.get_by_role("button", name=re.compile("Перейти к аналитике", re.I)).first.click()
+    page = current_page(context)
+    ensure_not_blocked(context)
+    phone_input = page.get_by_placeholder(re.compile(r"9999|телефон", re.I))
+    phone_input.wait_for(state="visible", timeout=15000)
+    phone_input.fill(phone)
     started = datetime.now(UTC)
-    if args.gmail:
+    page.get_by_role("button", name=re.compile(r"^Войти$|Продолжить", re.I)).click()
+    LOGGER.info("Phone verification requested")
+    ensure_not_blocked(context)
+    LOGGER.info("Waiting for new Gmail verification email")
+    code = wait_for_code(gmail, started)
+    LOGGER.info("New Gmail verification email received")
+    page = current_page(context)
+    ensure_not_blocked(context)
+    code_input = page.get_by_role("textbox", name=re.compile("код|code", re.I))
+    code_input.wait_for(state="visible", timeout=15000)
+    code_input.fill(code)
+    # Ozon may submit automatically after the last digit.
+    try:
+        page.get_by_role("button", name=re.compile("Подтвердить|Продолжить|Войти", re.I)).click(
+            timeout=3000
+        )
+    except PlaywrightTimeoutError:
+        pass
+    try:
+        page.wait_for_url(re.compile(r"^https://data\.ozon\.ru/"), timeout=20000)
+    except PlaywrightTimeoutError as exc:
+        raise RuntimeError("Ozon did not return to data.ozon.ru after verification") from exc
+    ensure_not_blocked(context)
+    if "sso.ozon.ru" in current_page(context).url:
+        raise RuntimeError("Ozon login was not completed")
 
-        def poll():
-            try:
-                service = gmail_service(
-                    os.getenv("GMAIL_CREDENTIALS_FILE", "credentials.json"),
-                    os.getenv("GMAIL_TOKEN_FILE", "token.json"),
-                )
-                code = wait_for_code(service, started)
-                print(f"Verification code (do not share): {code}")
-            except Exception as exc:
-                logging.error("Gmail verification failed: %s", type(exc).__name__)
 
-        threading.Thread(target=poll, daemon=True).start()
+def main() -> None:
+    load_dotenv()
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    phone = os.getenv("OZON_PHONE", "").strip()
+    if not phone:
+        raise ValueError("Set OZON_PHONE in .env before starting Ozon login")
+    if not re.fullmatch(r"\+?[0-9]{10,15}", phone):
+        raise ValueError("OZON_PHONE must contain 10–15 digits with optional leading +")
+    gmail = gmail_service(
+        os.getenv("GMAIL_CREDENTIALS_FILE", "credentials.json"),
+        os.getenv("GMAIL_TOKEN_FILE", "token.json"),
+    )
+    LOGGER.info("Starting Ozon authentication")
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=False)
-        context = browser.new_context(locale="ru-RU")
-        page = context.new_page()
-        page.goto("https://data.ozon.ru/", wait_until="domcontentloaded", timeout=30000)
-        ensure_not_blocked(context.pages)
-        url = urlsplit(page.url)
-        print(f"Browser page: {url.scheme}://{url.netloc}{url.path}")
-        confirmation = input(
-            "After you SEE the browser and complete login, type SAVE (Enter cancels): "
-        )
-        if confirmation != "SAVE":
-            raise RuntimeError("Login was not confirmed; cookies were not saved")
-        ensure_not_blocked(context.pages)
-        cookies = [
-            cookie for cookie in context.cookies() if cookie.get("domain", "").endswith("ozon.ru")
-        ]
-        if not cookies:
-            raise RuntimeError("No Ozon cookies found; login did not complete")
-        path = Path(os.getenv("OZON_COOKIES_FILE", "cookies.json"))
-        path.write_text(json.dumps(cookies), encoding="utf-8")
-        path.chmod(0o600)
-        logging.info("Saved browser cookies; Ozon authentication is not verified yet")
-        browser.close()
+        try:
+            context = browser.new_context(locale="ru-RU")
+            authenticate(context, phone, gmail)
+            cookies = [
+                cookie
+                for cookie in context.cookies()
+                if cookie.get("domain", "").endswith("ozon.ru")
+            ]
+            if not cookies:
+                raise RuntimeError("No Ozon cookies found after authentication")
+            path = Path(os.getenv("OZON_COOKIES_FILE", "cookies.json"))
+            path.write_text(json.dumps(cookies), encoding="utf-8")
+            path.chmod(0o600)
+            LOGGER.info("Ozon login completed; cookies saved")
+        finally:
+            browser.close()
 
 
 if __name__ == "__main__":
