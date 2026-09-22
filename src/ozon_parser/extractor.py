@@ -143,9 +143,7 @@ def dom_characteristics(soup: BeautifulSoup) -> dict[str, str | None]:
 
     # Ozon may render a label/value pair as adjacent generic blocks instead of dl/dt/dd.
     wanted_labels = {
-        alias
-        for aliases in DOM_CHARACTERISTIC_ALIASES.values()
-        for alias in aliases
+        alias for aliases in DOM_CHARACTERISTIC_ALIASES.values() for alias in aliases
     } | set(DOM_ART_PRIORITY)
     for text_node in soup.find_all(string=True):
         label = _clean_text(str(text_node)).casefold()
