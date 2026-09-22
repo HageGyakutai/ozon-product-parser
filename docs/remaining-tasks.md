@@ -157,6 +157,8 @@
 
 ### 7. Проверить Gmail OAuth на реальном аккаунте
 
+Подготовлено: `scripts/check_gmail.py` проверяет действующий OAuth-токен через `users.getProfile`; `--wait-for-code` проверяет получение нового кода без вывода его значения. Локально 79 passed, 10 PostgreSQL-тестов skipped. Реальные OAuth и письмо остаются непроверенными: `credentials.json` и `token.json` в рабочем окружении отсутствуют.
+
 - [ ] Создать/подключить Google Cloud OAuth Desktop Client.
 - [ ] Включить Gmail API.
 - [ ] Получить `credentials.json`.
