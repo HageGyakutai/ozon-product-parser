@@ -22,7 +22,9 @@ def import_cookies(source: Path, destination: Path, user_agent: str) -> int:
         if not isinstance(item, dict) or not ozon_cookie_domain(item.get("domain")):
             continue
         cookie = {
-            key: item[key] for key in ("name", "value", "domain", "path", "secure") if key in item
+            key: item[key]
+            for key in ("name", "value", "domain", "path", "secure", "httpOnly", "sameSite")
+            if key in item
         }
         cookie["expires"] = item.get("expirationDate", item.get("expires", item.get("expiry", -1)))
         cookies.append(cookie)
