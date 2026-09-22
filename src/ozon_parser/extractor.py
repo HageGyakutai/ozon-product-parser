@@ -187,6 +187,43 @@ def dom_characteristics(soup: BeautifulSoup) -> dict[str, str | None]:
     return result
 
 
+def widget_state(soup: BeautifulSoup, widget_name: str):
+    """Parse Ozon widget data-state JSON without depending on CSS class names."""
+    selector = f'div[id^="state-{widget_name}-"][data-state]'
+    for element in soup.select(selector):
+        raw = element.get("data-state")
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        try:
+            parsed = decode_nested_json(json.loads(raw))
+        except (ValueError, TypeError):
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    return None
+
+
+def gallery_media_counts(soup: BeautifulSoup) -> tuple[int | None, int | None]:
+    """Return seller gallery photo/video counts from Ozon webGallery state."""
+    state = widget_state(soup, "webGallery")
+    if not state:
+        return None, None
+
+    images = state.get("images")
+    videos = state.get("videos")
+    photos_count = len(images) if isinstance(images, list) else None
+    videos_count = len(videos) if isinstance(videos, list) else None
+    return photos_count, videos_count
+
+
+def dom_has_rich_content(soup: BeautifulSoup) -> bool:
+    """Detect rendered rich description blocks without treating plain text as rich content."""
+    for element in soup.select('[data-widget="webDescription"]'):
+        if element.find(["img", "picture", "video", "table", "ul", "ol"]) is not None:
+            return True
+    return False
+
+
 def offer_price(offers, fallback):
     """Prefer the first valid explicitly priced offer, then the product price."""
     for offer in offers if isinstance(offers, list) else [offers]:
@@ -257,6 +294,13 @@ def extract_product(html: str, sku: str) -> Product:
     # Only widgets explicitly tied to the requested SKU can augment this product.
     linked = [item for item in matches if item is not source]
     rich_widgets = [item.get("richContent") for item in linked if "richContent" in item]
+    gallery_photos, gallery_videos = gallery_media_counts(soup)
+    source_photos = (
+        int(source["photosSeller"]) if str(source.get("photosSeller", "")).isdigit() else None
+    )
+    source_videos = (
+        int(source["videosSeller"]) if str(source.get("videosSeller", "")).isdigit() else None
+    )
     return Product(
         sku=sku,
         title=title.strip(),
@@ -264,16 +308,13 @@ def extract_product(html: str, sku: str) -> Product:
         rating=rating,
         reviews_total=int(reviews) if reviews is not None else None,
         cover_image=pictures[0] if pictures else None,
-        photos_seller=int(source["photosSeller"])
-        if str(source.get("photosSeller", "")).isdigit()
-        else None,
-        videos_seller=int(source["videosSeller"])
-        if str(source.get("videosSeller", "")).isdigit()
-        else None,
+        photos_seller=source_photos if source_photos is not None else gallery_photos,
+        videos_seller=source_videos if source_videos is not None else gallery_videos,
         color=details.get("color"),
         material=details.get("material"),
         art_set=details.get("art_set"),
         has_rich_content=rich_content(source.get("description"))
         or rich_content(source.get("richContent"))
-        or any(rich_content(widget) for widget in rich_widgets),
+        or any(rich_content(widget) for widget in rich_widgets)
+        or dom_has_rich_content(soup),
     )
