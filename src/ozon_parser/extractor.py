@@ -92,21 +92,23 @@ def extract_product(html: str, sku: str) -> Product:
             continue
     if not states:
         raise ValueError("No parseable embedded JSON in product page; inspect authenticated HTML")
-    product_state = next(
-        (item for state in states for item in walk(state) if item.get("@type") == "Product"), None
-    )
+    candidates = [item for state in states for item in walk(state)]
+    matches = [item for item in candidates if str(item.get("sku") or item.get("productId")) == sku]
+    product_state = next((item for item in matches if item.get("@type") == "Product"), None)
     source = product_state or next(
         (
             item
-            for state in states
-            for item in walk(state)
+            for item in matches
             if any(k in item for k in ("sku", "productId"))
             and any(k in item for k in ("name", "title"))
         ),
         None,
     )
     if not source:
-        raise ValueError("Embedded JSON has no recognizable product object")
+        raise ValueError(f"Embedded JSON has no recognizable product for SKU={sku}")
+    source_sku = source.get("sku") or source.get("productId")
+    if source_sku is not None and str(source_sku) != sku:
+        raise ValueError(f"Embedded product SKU={source_sku} differs from requested SKU={sku}")
     title = source.get("name") or source.get("title")
     if not isinstance(title, str) or not title.strip():
         raise ValueError("Product title missing in embedded JSON")
@@ -124,9 +126,19 @@ def extract_product(html: str, sku: str) -> Product:
     if isinstance(pictures, dict):
         pictures = [pictures.get("url")]
     details = characteristics(source)
-    price = number(offers.get("price") or source.get("price"))
-    rating = number(aggregate.get("ratingValue") or source.get("rating"))
-    reviews = number(aggregate.get("reviewCount") or source.get("reviewsCount"))
+    price = number(offers.get("price") if offers.get("price") is not None else source.get("price"))
+    rating = number(
+        aggregate.get("ratingValue")
+        if aggregate.get("ratingValue") is not None
+        else source.get("rating")
+    )
+    reviews = number(
+        aggregate.get("reviewCount")
+        if aggregate.get("reviewCount") is not None
+        else source.get("reviewsCount")
+    )
+    if reviews is not None and reviews != int(reviews):
+        raise ValueError("Reviews count must be an integer")
     return Product(
         sku=sku,
         title=title.strip(),
