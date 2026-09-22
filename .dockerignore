@@ -1,0 +1,10 @@
+.venv
+.git
+.env
+cookies.json
+credentials.json
+token.json
+__pycache__
+.pytest_cache
+.ruff_cache
+output
