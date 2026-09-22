@@ -47,6 +47,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    # The OAuth library both logs and prints the same authorization URL.
-    logging.getLogger("google_auth_oauthlib.flow").setLevel(logging.WARNING)
     raise SystemExit(main())
