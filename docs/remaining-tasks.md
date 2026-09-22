@@ -195,9 +195,13 @@
 - [x] Выполнить первый реальный запрос карточки через requests.Session.
 - [x] Определить точный результат requests transport: HTTP 403 forbidden до extractor при корректно загруженных cookies.
 - [x] Добавить отдельный Playwright browser transport, использующий тот же session file и extractor.
-- [ ] Выполнить реальный запрос карточки через `--transport browser`.
-- [ ] Проверить отсутствие redirect на login в browser transport.
-- [ ] Проверить отсутствие antibot/403 response в browser transport.
+- [x] Выполнить реальный запрос карточки через `--transport browser`: Playwright-launched Chromium получил HTTP 403 до extractor.
+- [x] Подтвердить, что browser transport не редиректит в login до отказа: получен именно HTTP 403 на карточке.
+- [x] Подтвердить antibot/403 ограничение в Playwright-launched Chromium.
+- [x] Добавить диагностический режим подключения к внешнему обычному Chrome через CDP с загрузкой того же `cookies.json`.
+- [ ] Выполнить реальный запрос карточки через внешний Chrome/CDP.
+- [ ] Если CDP получает HTML, проверить фактическую структуру JSON и все 12 полей.
+- [ ] Если CDP также получает 403/antibot, зафиксировать live-ограничение и перейти к реальной сохранённой HTML fixture для проверки extractor.
 - [ ] Проверить совместимость User-Agent и cookies.
 - [ ] При необходимости добавить browser-derived headers.
 - [ ] Зафиксировать минимальный набор headers, действительно необходимый для работы.
