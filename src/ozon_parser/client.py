@@ -1,18 +1,14 @@
 import json
+import time
 from pathlib import Path
 
 import requests
 from requests.adapters import HTTPAdapter
+from requests.cookies import create_cookie
 from urllib3.util.retry import Retry
 
 from .auth_guard import blocked_page_text
-
-
-def ozon_cookie_domain(domain: object) -> bool:
-    if not isinstance(domain, str):
-        return False
-    normalized = domain.lstrip(".").lower()
-    return normalized == "ozon.ru" or normalized.endswith(".ozon.ru")
+from .session_data import ozon_cookie_domain
 
 
 def product_session(cookies_file: str = "cookies.json") -> requests.Session:
@@ -20,34 +16,66 @@ def product_session(cookies_file: str = "cookies.json") -> requests.Session:
     if not path.is_file():
         raise FileNotFoundError(f"{path} missing; authenticate first")
     try:
-        cookies = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(data, dict) and data.get("version") == 1:
+            cookies = data.get("cookies")
+            user_agent = data.get("user_agent")
+            if (
+                not isinstance(user_agent, str)
+                or not user_agent.strip()
+                or "\n" in user_agent
+                or "\r" in user_agent
+            ):
+                raise ValueError("Invalid browser User-Agent")
+        elif isinstance(data, list):
+            # Legacy cookie files did not record the browser User-Agent.
+            cookies, user_agent = data, None
+        else:
+            raise ValueError("Invalid session format")
         if not isinstance(cookies, list):
             raise ValueError("Expected a list of cookies")
     except (ValueError, OSError) as exc:
         raise ValueError("Cookie file damaged; authenticate again") from exc
     session = requests.Session()
-    session.headers.update(
-        {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) "
-            "AppleWebKit/537.36 Chrome/130.0 Safari/537.36",
-            "Accept-Language": "ru-RU,ru;q=0.9",
-            "Accept": "text/html,application/xhtml+xml",
-        }
-    )
+    session.headers.update({
+        "Accept-Language": "ru-RU,ru;q=0.9",
+        "Accept": "text/html,application/xhtml+xml",
+    })
+    if user_agent is not None:
+        session.headers["User-Agent"] = user_agent
     session.mount(
         "https://",
         HTTPAdapter(
             max_retries=Retry(total=2, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
         ),
     )
+    now = time.time()
     for cookie in cookies:
-        if ozon_cookie_domain(cookie.get("domain")) and cookie.get("name") and cookie.get("value"):
-            session.cookies.set(
-                cookie["name"],
-                cookie["value"],
-                domain=cookie["domain"],
-                path=cookie.get("path", "/"),
-            )
+        if not isinstance(cookie, dict) or not ozon_cookie_domain(cookie.get("domain")):
+            continue
+        name, value = cookie.get("name"), cookie.get("value")
+        domain, cookie_path = cookie["domain"], cookie.get("path", "/")
+        expiry, secure = cookie.get("expires"), cookie.get("secure", False)
+        if not isinstance(name, str) or not name or not isinstance(value, str):
+            continue
+        if not isinstance(cookie_path, str) or not cookie_path.startswith("/"):
+            continue
+        if type(secure) is not bool:
+            continue
+        if expiry is not None:
+            if isinstance(expiry, bool) or not isinstance(expiry, (int, float)):
+                continue
+            # Playwright uses -1 for session cookies.
+            if expiry > 0 and expiry <= now:
+                continue
+            if expiry <= 0:
+                expiry = None
+            else:
+                expiry = int(expiry)
+        session.cookies.set_cookie(create_cookie(
+            name=name, value=value, domain=domain, path=cookie_path,
+            secure=secure, expires=expiry,
+        ))
     if not session.cookies:
         raise ValueError("No usable Ozon cookies; authenticate again")
     return session
