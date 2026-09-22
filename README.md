@@ -155,6 +155,8 @@ uv run python scripts/inspect_product_html.py real-product.html 2359066702
 
 На реальной карточке инспектор подтвердил DOM-метки `Цвет` и `Материал`. Extractor теперь использует DOM-fallback для `color`, `material` и `art_set`, если эти поля отсутствуют в выбранном JSON product state. JSON остаётся приоритетным источником. Для media/rich-content требуется дальнейшая проверка внутреннего Ozon state; обновлённый инспектор выводит целевые `SCRIPT_KEYS`, `DOM_WIDGETS` и сводные маркеры без значений.
 
+Для media extractor дополнительно умеет читать JSON из `div[id^="state-webGallery-"][data-state]`: длина массива `images` используется как `photos_seller`, `videos` — как `videos_seller`, если явные поля отсутствуют в основном product state. `has_rich_content` получает DOM-fallback только при наличии медиа/таблиц/списков внутри `webDescription`; простой текст сам по себе rich-content не включает. Эти fallback-и должны быть подтверждены на сохранённом реальном HTML перед финальным статусом.
+
 ```bash
 uv run python scripts/parse_ozon.py 2359066702 2829800382
 uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.csv
