@@ -109,9 +109,8 @@ class BrowserProductClient:
             url = page.url
             if "data.ozon.ru" in url or "sso.ozon.ru" in url:
                 raise ValueError("Ozon redirected browser transport to login")
-            blocked = (
-                "antibot challenge" in html[:10000].casefold()
-                or blocked_page_text(page.locator("body").inner_text())
+            blocked = "antibot challenge" in html[:10000].casefold() or blocked_page_text(
+                page.locator("body").inner_text()
             )
             if blocked:
                 raise ValueError(
