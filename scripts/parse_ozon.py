@@ -3,8 +3,10 @@ import csv
 import logging
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
+
 from ozon_parser.client import fetch_product, product_session
 from ozon_parser.extractor import extract_product
 from ozon_parser.storage import database_engine, save_product
