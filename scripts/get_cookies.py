@@ -19,7 +19,10 @@ LOGGER = logging.getLogger(__name__)
 
 def ensure_not_blocked(context) -> None:
     for page in context.pages:
-        if not page.is_closed() and blocked_page_text(page.locator("body").inner_text()):
+        if not page.is_closed() and (
+            blocked_page_text(page.locator("body").inner_text())
+            or "antibot challenge" in page.title().casefold()
+        ):
             raise RuntimeError("Ozon refused this browser. No cookies saved; see incident on page.")
 
 
@@ -79,7 +82,10 @@ def main() -> None:
     )
     LOGGER.info("Starting Ozon authentication")
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=False)
+        channel = os.getenv("OZON_BROWSER_CHANNEL", "").strip()
+        if channel and channel not in {"chrome", "msedge"}:
+            raise ValueError("OZON_BROWSER_CHANNEL must be chrome or msedge")
+        browser = playwright.chromium.launch(headless=False, channel=channel or None)
         try:
             context = browser.new_context(locale="ru-RU")
             authenticate(context, phone, gmail)
