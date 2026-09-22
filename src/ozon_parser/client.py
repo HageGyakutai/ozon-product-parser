@@ -1,4 +1,3 @@
-import json
 import time
 from pathlib import Path
 
@@ -8,7 +7,7 @@ from requests.cookies import create_cookie
 from urllib3.util.retry import Retry
 
 from .auth_guard import blocked_page_text
-from .session_data import ozon_cookie_domain
+from .session_data import load_browser_session, ozon_cookie_domain
 
 
 def product_session(cookies_file: str = "cookies.json") -> requests.Session:
@@ -16,25 +15,8 @@ def product_session(cookies_file: str = "cookies.json") -> requests.Session:
     if not path.is_file():
         raise FileNotFoundError(f"{path} missing; authenticate first")
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        if isinstance(data, dict) and data.get("version") == 1:
-            cookies = data.get("cookies")
-            user_agent = data.get("user_agent")
-            if (
-                not isinstance(user_agent, str)
-                or not user_agent.strip()
-                or "\n" in user_agent
-                or "\r" in user_agent
-            ):
-                raise ValueError("Invalid browser User-Agent")
-        elif isinstance(data, list):
-            # Legacy cookie files did not record the browser User-Agent.
-            cookies, user_agent = data, None
-        else:
-            raise ValueError("Invalid session format")
-        if not isinstance(cookies, list):
-            raise ValueError("Expected a list of cookies")
-    except (ValueError, OSError) as exc:
+        cookies, user_agent = load_browser_session(path)
+    except ValueError as exc:
         raise ValueError("Cookie file damaged; authenticate again") from exc
     session = requests.Session()
     session.headers.update(
