@@ -134,6 +134,15 @@ uv run python scripts/parse_ozon.py 2359066702 \
 
 Если WSL не видит Windows endpoint через `127.0.0.1`, не открывайте debug-порт наружу без необходимости. Сначала используйте обычные локальные способы WSL/Windows networking либо запустите parser в той же ОС, где запущен Chrome. CDP endpoint предоставляет полный контроль над браузером, поэтому его нельзя публиковать или оставлять доступным из внешней сети.
 
+На проверенной Windows-машине внешний Chrome запускался с `--remote-debugging-port=9222`, но порт не открывался. Диагностика показала системную Chrome policy `HKLM\\Software\\Policies\\Google\\Chrome\\RemoteDebuggingAllowed = 0`. При такой политике CDP недоступен независимо от WSL networking. Проект не пытается обходить системную политику. В этом окружении для проверки extractor используйте HTML реальной карточки, сохранённый вручную из обычного Chrome, и offline режим `--html-file`. Такой тест подтверждает разбор реальной структуры карточки и запись в PostgreSQL, но не подтверждает автоматизированную загрузку карточки.
+
+Безопасный offline-порядок:
+1. В обычном Chrome откройте нужную реальную карточку Ozon и дождитесь полной загрузки.
+2. Сохраните HTML локально как `real-product.html` (не добавляйте файл в Git и не отправляйте его без ручной проверки на персональные данные).
+3. Перенесите файл в рабочую директорию WSL.
+4. Выполните `uv run python scripts/parse_ozon.py <SKU> --html-file real-product.html`.
+5. Проверьте строку в PostgreSQL.
+
 ```bash
 uv run python scripts/parse_ozon.py 2359066702 2829800382
 uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.csv
