@@ -44,7 +44,12 @@ def main():
         context = browser.new_context(locale="ru-RU")
         page = context.new_page()
         page.goto("https://data.ozon.ru/", wait_until="domcontentloaded", timeout=30000)
-        input("Complete browser login, then press Enter here to save cookies: ")
+        print(f"Browser page: {page.url}")
+        confirmation = input(
+            "After you SEE the browser and complete login, type SAVE (Enter cancels): "
+        )
+        if confirmation != "SAVE":
+            raise RuntimeError("Login was not confirmed; cookies were not saved")
         cookies = [
             cookie for cookie in context.cookies() if cookie.get("domain", "").endswith("ozon.ru")
         ]
@@ -53,7 +58,7 @@ def main():
         path = Path(os.getenv("OZON_COOKIES_FILE", "cookies.json"))
         path.write_text(json.dumps(cookies), encoding="utf-8")
         path.chmod(0o600)
-        logging.info("Saved Ozon cookies")
+        logging.info("Saved browser cookies; Ozon authentication is not verified yet")
         browser.close()
 
 
