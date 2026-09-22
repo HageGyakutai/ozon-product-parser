@@ -29,7 +29,12 @@ services:
       DATABASE_URL: postgresql+psycopg://ozon:local_only_change_me@postgres:5432/ozon
       OZON_COOKIES_FILE: /app/cookies.json
     volumes:
-      - ./cookies.json:/app/cookies.json:ro
+      - type: bind
+        source: ./cookies.json
+        target: /app/cookies.json
+        read_only: true
+        bind:
+          create_host_path: false
     entrypoint: ["python", "scripts/parse_ozon.py"]
     depends_on:
       migrate:
