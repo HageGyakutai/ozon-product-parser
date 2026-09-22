@@ -18,6 +18,22 @@ cp .env.example .env
 
 ## PostgreSQL
 
+Один запуск **после появления действительного `cookies.json`**: Compose поднимет PostgreSQL, дождётся статуса healthy, выполнит Alembic и только затем запустит парсер. Коды SKU передаются последними аргументами:
+
+```bash
+docker compose run --build --rm parser 2359066702 2829800382
+```
+
+Если cookies пока нет, можно одной командой подготовить только PostgreSQL и таблицу `products`:
+
+```bash
+docker compose up --build --exit-code-from migrate migrate
+```
+
+При запуске парсера контейнер читает локальный `cookies.json` только для чтения. Файл не копируется в Docker-образ. Без действительных cookies или при отказе Ozon парсер завершится ошибкой.
+
+Альтернативно для запуска парсера непосредственно в WSL:
+
 ```bash
 docker compose up -d postgres
 # дождитесь статуса healthy: docker compose ps
@@ -63,7 +79,7 @@ uv run ruff format --check .
 uv run pytest -q
 ```
 
-Тест записи в PostgreSQL требует отдельную пустую БД. Создайте её и выполните:
+CI автоматически собирает образ, дожидается PostgreSQL, применяет миграцию, проверяет появление `products` и запускает pytest на отдельной PostgreSQL-базе. Локально тест записи в PostgreSQL требует отдельную пустую БД. Создайте её и выполните:
 
 ```bash
 docker compose exec postgres createdb -U ozon ozon_test
