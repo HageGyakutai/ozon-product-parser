@@ -143,7 +143,7 @@ uv run python scripts/parse_ozon.py 2359066702 \
 4. Выполните `uv run python scripts/parse_ozon.py <SKU> --html-file real-product.html`.
 5. Проверьте строку в PostgreSQL.
 
-На реальном HTML SKU `2359066702` подтверждены успешный INSERT и повторный UPSERT: сохранился тот же `id` и `created_at`, а `updated_at` изменился. На первом SELECT были заполнены `sku`, `title`, `price`, `rating`, `reviews_total`, `cover_image`; поля `photos_seller`, `videos_seller`, `color`, `material`, `art_set` были NULL, `has_rich_content=false`. Это ещё не доказывает ошибку: часть данных может отсутствовать у конкретного товара либо находиться вне выбранного JSON-LD объекта.
+На реальном HTML SKU `2359066702` подтверждены успешный INSERT и повторный UPSERT: сохранился тот же `id` и `created_at`, а `updated_at` изменился. После DOM-fallback дополнительно подтверждены `color=Темно-розовый` и `material=Бумага`. Сейчас реально заполнены восемь полей: `sku`, `title`, `price`, `rating`, `reviews_total`, `cover_image`, `color`, `material`. Для `photos_seller`, `videos_seller`, `art_set`, `has_rich_content` ещё требуется подтверждение источника; NULL/false пока не считаются ошибкой без проверки конкретной карточки.
 
 Для безопасного анализа структуры реального HTML без вывода значений используйте:
 
@@ -151,7 +151,7 @@ uv run python scripts/parse_ozon.py 2359066702 \
 uv run python scripts/inspect_product_html.py real-product.html 2359066702
 ```
 
-Инспектор выводит только JSON-пути, имена ключей, типы контейнеров и названия целевых характеристик; значения полей не печатаются.
+Инспектор выводит только JSON-пути, имена ключей, типы контейнеров, названия целевых характеристик и безопасные структурные счётчики внутри product/media widgets; значения полей не печатаются.
 
 На реальной карточке инспектор подтвердил DOM-метки `Цвет` и `Материал`. Extractor теперь использует DOM-fallback для `color`, `material` и `art_set`, если эти поля отсутствуют в выбранном JSON product state. JSON остаётся приоритетным источником. Для media/rich-content требуется дальнейшая проверка внутреннего Ozon state; обновлённый инспектор выводит целевые `SCRIPT_KEYS`, `DOM_WIDGETS` и сводные маркеры без значений.
 
