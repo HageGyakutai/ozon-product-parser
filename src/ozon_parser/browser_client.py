@@ -62,17 +62,21 @@ class BrowserProductClient:
         browser_name: str = "chromium",
         channel: str | None = None,
         headless: bool = False,
+        cdp_endpoint: str | None = None,
     ) -> None:
         path = Path(cookies_file)
         cookies, user_agent = load_browser_session(path)
         browser_name = browser_name.strip().lower()
         channel = channel.strip() if channel else None
+        cdp_endpoint = cdp_endpoint.strip() if cdp_endpoint else None
         if browser_name not in {"chromium", "firefox", "webkit"}:
             raise ValueError("OZON_BROWSER must be chromium, firefox or webkit")
         if channel and channel not in {"chrome", "msedge"}:
             raise ValueError("OZON_BROWSER_CHANNEL must be chrome or msedge")
         if channel and browser_name != "chromium":
             raise ValueError("OZON_BROWSER_CHANNEL is available only with OZON_BROWSER=chromium")
+        if cdp_endpoint and browser_name != "chromium":
+            raise ValueError("OZON_CDP_ENDPOINT requires OZON_BROWSER=chromium")
         browser_cookies = _playwright_cookies(cookies)
         if not browser_cookies:
             raise ValueError("No usable Ozon cookies for browser transport")
@@ -80,16 +84,24 @@ class BrowserProductClient:
         self._playwright = sync_playwright().start()
         self._browser = None
         self._context = None
+        self._owns_context = False
         try:
-            launcher = getattr(self._playwright, browser_name)
-            launch_options = {"headless": headless}
-            if channel:
-                launch_options["channel"] = channel
-            self._browser = launcher.launch(**launch_options)
-            context_options = {"locale": "ru-RU"}
-            if user_agent:
-                context_options["user_agent"] = user_agent
-            self._context = self._browser.new_context(**context_options)
+            if cdp_endpoint:
+                self._browser = self._playwright.chromium.connect_over_cdp(cdp_endpoint)
+                if not self._browser.contexts:
+                    raise RuntimeError("Connected Chrome has no default browser context")
+                self._context = self._browser.contexts[0]
+            else:
+                launcher = getattr(self._playwright, browser_name)
+                launch_options = {"headless": headless}
+                if channel:
+                    launch_options["channel"] = channel
+                self._browser = launcher.launch(**launch_options)
+                context_options = {"locale": "ru-RU"}
+                if user_agent:
+                    context_options["user_agent"] = user_agent
+                self._context = self._browser.new_context(**context_options)
+                self._owns_context = True
             self._context.add_cookies(browser_cookies)
         except Exception as exc:
             self.close()
@@ -139,8 +151,10 @@ class BrowserProductClient:
 
     def close(self) -> None:
         if self._context is not None:
-            self._context.close()
+            if self._owns_context:
+                self._context.close()
             self._context = None
+            self._owns_context = False
         if self._browser is not None:
             self._browser.close()
             self._browser = None
