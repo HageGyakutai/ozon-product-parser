@@ -218,7 +218,8 @@
 - [x] Подтвердить, что текущий extractor на реальном HTML находит распознаваемый product state для SKU `2359066702`.
 - [x] Зафиксировать базовую структуру сохранённой карточки: один parseable JSON-LD `Product` с ключами `@context,@type,aggregateRating,brand,description,image,name,offers,sku`; дополнительных целевых полей в стандартном JSON-LD нет.
 - [ ] Проверить нестандартные script/state-блоки и rendered DOM расширенным инспектором.
-- [ ] Определить реальные пути до отсутствующих/неподтверждённых полей; добавлен безопасный `scripts/inspect_product_html.py`, который выводит структуру без значений.
+- [x] Подтвердить по реальному DOM наличие `Цвет` и `Материал`; добавлен DOM-fallback для `color`, `material`, `art_set` с приоритетом JSON над DOM.
+- [ ] Определить реальные источники `photos_seller`, `videos_seller` и `has_rich_content`; script №13 содержит SKU и признаки photo/video/gallery/media/characteristics, но его структура ещё не разобрана.
 - [ ] Обновить extractor adapters.
 
 Обязательные поля для подтверждения:
