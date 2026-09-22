@@ -153,6 +153,8 @@ uv run python scripts/inspect_product_html.py real-product.html 2359066702
 
 Инспектор выводит только JSON-пути, имена ключей, типы контейнеров и названия целевых характеристик; значения полей не печатаются.
 
+На реальной карточке инспектор подтвердил DOM-метки `Цвет` и `Материал`. Extractor теперь использует DOM-fallback для `color`, `material` и `art_set`, если эти поля отсутствуют в выбранном JSON product state. JSON остаётся приоритетным источником. Для media/rich-content требуется дальнейшая проверка внутреннего Ozon state; обновлённый инспектор выводит целевые `SCRIPT_KEYS`, `DOM_WIDGETS` и сводные маркеры без значений.
+
 ```bash
 uv run python scripts/parse_ozon.py 2359066702 2829800382
 uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.csv
