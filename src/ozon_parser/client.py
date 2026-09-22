@@ -5,6 +5,15 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from .auth_guard import blocked_page_text
+
+
+def ozon_cookie_domain(domain: object) -> bool:
+    if not isinstance(domain, str):
+        return False
+    normalized = domain.lstrip(".").lower()
+    return normalized == "ozon.ru" or normalized.endswith(".ozon.ru")
+
 
 def product_session(cookies_file: str = "cookies.json") -> requests.Session:
     path = Path(cookies_file)
@@ -32,11 +41,7 @@ def product_session(cookies_file: str = "cookies.json") -> requests.Session:
         ),
     )
     for cookie in cookies:
-        if (
-            cookie.get("domain", "").endswith("ozon.ru")
-            and cookie.get("name")
-            and cookie.get("value")
-        ):
+        if ozon_cookie_domain(cookie.get("domain")) and cookie.get("name") and cookie.get("value"):
             session.cookies.set(
                 cookie["name"],
                 cookie["value"],
@@ -57,4 +62,6 @@ def fetch_product(session: requests.Session, sku: str) -> str:
     response.raise_for_status()
     if "data.ozon.ru" in response.url:
         raise ValueError("Ozon redirected to login; authenticate again")
+    if "antibot challenge" in response.text[:10000].casefold() or blocked_page_text(response.text):
+        raise ValueError(f"Ozon blocked access to SKU={sku}; product HTML unavailable")
     return response.text
