@@ -17,6 +17,8 @@ def save_browser_session(path: Path, cookies: list[dict], user_agent: str) -> No
     """Write secrets with restricted permissions and replace the old file atomically."""
     if not user_agent or not user_agent.strip():
         raise ValueError("Browser User-Agent is missing")
+    if path.is_dir():
+        raise ValueError(f"{path} is a directory; remove or rename it before saving cookies")
     payload = {"version": 1, "user_agent": user_agent, "cookies": cookies}
     temporary = None
     try:
