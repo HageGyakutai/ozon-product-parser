@@ -21,7 +21,10 @@ def save_browser_session(path: Path, cookies: list[dict], user_agent: str) -> No
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.",
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
             delete=False,
         ) as handle:
             temporary = Path(handle.name)
