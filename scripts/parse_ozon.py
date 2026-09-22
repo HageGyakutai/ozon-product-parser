@@ -21,10 +21,19 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     if any(not sku.isdecimal() for sku in args.skus):
         parser.error("Each SKU must be numeric")
-    engine = database_engine()
-    client = product_session(os.getenv("OZON_COOKIES_FILE", "cookies.json"))
+    try:
+        client = product_session(os.getenv("OZON_COOKIES_FILE", "cookies.json"))
+    except (OSError, ValueError) as exc:
+        logging.error("Cannot start parser: %s", exc)
+        raise SystemExit(2) from None
+    try:
+        engine = database_engine()
+    except ValueError as exc:
+        client.close()
+        logging.error("Cannot start parser: %s", exc)
+        raise SystemExit(2) from None
     products = []
-    with Session(engine) as db:
+    with client, Session(engine) as db:
         for sku in args.skus:
             try:
                 logging.info("Parsing SKU=%s", sku)
