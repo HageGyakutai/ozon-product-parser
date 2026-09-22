@@ -152,7 +152,9 @@ def inspect_html(html: str, sku: str, max_lines: int = 350) -> list[str]:
                     )
 
     # Inspect every script, including non-JSON application state, without printing its contents.
-    key_pattern = re.compile(r'["\\\']([A-Za-zА-Яа-я_][A-Za-zА-Яа-я0-9_.-]{1,79})["\\\']\\s*:')
+    key_pattern = re.compile(
+        r"""["']([A-Za-zА-Яа-я_][A-Za-zА-Яа-я0-9_.-]{1,79})["']\s*:"""
+    )
     for script_index, script in enumerate(scripts):
         text = script.string or script.get_text()
         if not text:
@@ -182,10 +184,7 @@ def inspect_html(html: str, sku: str, max_lines: int = 350) -> list[str]:
                 }
             )
             if interesting_keys:
-                emit(
-                    f"SCRIPT_KEYS script={script_index} keys="
-                    + ",".join(interesting_keys[:80])
-                )
+                emit(f"SCRIPT_KEYS script={script_index} keys=" + ",".join(interesting_keys[:80]))
 
     # Look for rendered characteristic labels without printing adjacent values.
     for element in soup.find_all(string=True):
@@ -218,8 +217,7 @@ def inspect_html(html: str, sku: str, max_lines: int = 350) -> list[str]:
     ]
     if interesting_widgets:
         emit(
-            "DOM_WIDGETS "
-            + ",".join(f"{name}:{count}" for name, count in interesting_widgets[:80])
+            "DOM_WIDGETS " + ",".join(f"{name}:{count}" for name, count in interesting_widgets[:80])
         )
 
     indexed_nodes = soup.select("[data-index]")
