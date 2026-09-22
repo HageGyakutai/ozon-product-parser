@@ -87,3 +87,23 @@ def test_inspector_reports_widget_structure():
     assert "indexed=2" in output
     assert "WIDGET_DETAIL name=richTextWidget occurrence=1" in output
     assert "table=1" in output
+
+
+def test_inspector_reports_data_state_structure():
+    html = """
+    <html><body>
+      <div
+        id="state-webGallery-123"
+        data-state='{"images":[{"src":"a"},{"src":"b"}],"videos":[{"url":"v"}]}'
+      ></div>
+      <script type="application/ld+json">
+      {"@type": "Product", "sku": "123", "name": "Example"}
+      </script>
+    </body></html>
+    """
+
+    output = "\n".join(MODULE.inspect_html(html, "123"))
+
+    assert "STATE_WIDGET name=webGallery occurrence=1" in output
+    assert "images=2" in output
+    assert "videos=1" in output
