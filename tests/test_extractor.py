@@ -181,3 +181,30 @@ def test_price_uses_product_fallback_if_offers_have_no_valid_price():
         "offers": [{"price": None}, {"price": "unknown"}],
     }
     assert extract_product(embedded(state), "123").price == Decimal("90")
+
+
+def test_dom_characteristics_fill_missing_json_fields():
+    page = html().replace(
+        "</script>",
+        """</script>
+        <dl><dt><span>Цвет</span></dt><dd>Синий</dd></dl>
+        <dl><dt><span>Материал</span></dt><dd>Бумага</dd></dl>
+        <dl><dt><span>Артикул производителя</span></dt><dd>ABC-42</dd></dl>
+        """,
+    )
+    page = page.replace(
+        '"characteristics": [{"name": "Цвет", "value": "Красный"}],',
+        '"characteristics": [],',
+    )
+    item = extract_product(page, "123")
+    assert (item.color, item.material, item.art_set) == ("Синий", "Бумага", "ABC-42")
+
+
+def test_json_characteristics_have_priority_over_dom_fallback():
+    page = html() + """
+    <dl><dt>Цвет</dt><dd>Синий</dd></dl>
+    <dl><dt>Материал</dt><dd>Бумага</dd></dl>
+    """
+    item = extract_product(page, "123")
+    assert item.color == "Красный"
+    assert item.material == "Бумага"
