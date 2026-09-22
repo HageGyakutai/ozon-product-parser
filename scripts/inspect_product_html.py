@@ -152,9 +152,7 @@ def inspect_html(html: str, sku: str, max_lines: int = 350) -> list[str]:
                     )
 
     # Inspect every script, including non-JSON application state, without printing its contents.
-    key_pattern = re.compile(
-        r"""["']([A-Za-zА-Яа-я_][A-Za-zА-Яа-я0-9_.-]{1,79})["']\s*:"""
-    )
+    key_pattern = re.compile(r"""["']([A-Za-zА-Яа-я_][A-Za-zА-Яа-я0-9_.-]{1,79})["']\s*:""")
     for script_index, script in enumerate(scripts):
         text = script.string or script.get_text()
         if not text:
