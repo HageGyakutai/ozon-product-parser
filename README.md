@@ -4,7 +4,7 @@
 
 Учебное тестовое решение: авторизованная сессия Ozon, извлечение встроенного JSON из HTML карточек, сохранение товаров в PostgreSQL с UPSERT по SKU. CSV доступен дополнительно.
 
-**Статус:** структура JSON в реальных карточках, авторизация и полный запуск с PostgreSQL пока не подтверждены. Без проверки с авторизованной сессией этот проект нельзя считать готовым к сдаче работодателю. В WSL Ozon возвращает `Antibot Challenge Page` как Chromium, так и Firefox ещё до авторизации; HTML карточки не получен. Обработчик JSON покрыт локальными примерами Schema.org Product, проверяет совпадение SKU и не сохраняет HTML блокировки как товар. Отдельные поля `photos_seller` и `videos_seller` могут отсутствовать в Schema.org: число картинок в `image` не обязательно соответствует числу фотографий продавца. Эти поля следует сверить с реальным Ozon JSON перед сдачей.
+**Статус:** автоматически проверены парсинг синтетического embedded JSON, перенос session metadata, локальная логика Gmail и CLI; ранее в GitHub Actions проверялись PostgreSQL/Alembic и интеграционные тесты. Результат CI для самых последних изменений отдельно не подтверждён. Реальные Gmail/Ozon login, структура живой карточки и полный сценарий остаются открытыми. В WSL Playwright Chromium и Firefox получают `Antibot Challenge Page` до формы входа. Число картинок в `image` не равно гарантированно числу фото продавца; `photos_seller` и `videos_seller` нужно сверить с настоящим JSON.
 
 ## Установка
 
@@ -32,6 +32,8 @@ docker compose run --build --rm parser 2359066702 2829800382
 docker compose up --build --exit-code-from migrate migrate
 ```
 
+После подготовки БД получение cookies выполняется в локальном Python-окружении (`get_cookies.py` запускает браузер), а парсер — через Compose либо локально. `docker compose run --build --rm parser ...` автоматически поднимает БД и миграцию при наличии файла cookies.
+
 При запуске парсера контейнер читает локальный `cookies.json` только для чтения. Файл не копируется в Docker-образ. Без действительных cookies или при отказе Ozon парсер завершится ошибкой.
 
 При локальном запуске Python вне Compose в `.env` установите `DATABASE_URL=postgresql+psycopg://ozon:local_only_change_me@localhost:5432/ozon`. PostgreSQL 16, SQLAlchemy 2, psycopg 3; миграция создаёт `products` с уникальным индексом `sku`, NUMERIC для цены и рейтинга, nullable характеристиками и timestamptz для дат. Повторное сохранение выполняет `ON CONFLICT (sku) DO UPDATE`.
@@ -41,6 +43,8 @@ docker compose up --build --exit-code-from migrate migrate
 В `.env` заполните `OZON_PHONE` и пути к файлам Gmail OAuth. Создайте проект в Google Cloud, включите Gmail API, создайте OAuth Client ID типа Desktop и сохраните его как `credentials.json`. На первом запуске официальная библиотека Google попросит разрешить доступ `gmail.readonly` через браузер. Файлы `credentials.json`, `token.json` и `cookies.json` исключены из Git.
 
 `GMAIL_QUERY` задаёт поисковый запрос Gmail (по умолчанию `ozon`), а `GMAIL_SENDER_DOMAINS` — допустимые домены адреса отправителя через запятую (по умолчанию `ozon.ru`, включая поддомены). Отбор по адресу и времени получения выполняется дополнительно после поиска Gmail. Реальный домен отправителя подтвердите на письме своего аккаунта и при необходимости настройте; содержимое писем и коды не журналируются.
+
+Секретные `credentials.json`, `token.json`, `cookies.json` и `.env` храните только локально и не отправляйте вместе с проектом. Новая версия файла cookies содержит `user_agent` и cookies с доменом, путём, флагом `secure` и сроком действия. `requests.Session` использует сохранённый User-Agent и пропускает истёкшие cookies; старый формат списка cookies читается без восстановления браузерного User-Agent. Существование файла cookies не подтверждает успешный вход: защищённая проверка ещё не реализована.
 
 ```bash
 uv run python scripts/get_cookies.py
@@ -58,6 +62,8 @@ uv run python scripts/get_cookies.py
 uv run python scripts/parse_ozon.py 2359066702 2829800382
 uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.csv
 ```
+
+Для локального запуска сначала примените миграцию командой `docker compose up --build --exit-code-from migrate migrate`, затем настройте `.env` и выполните `uv run python scripts/parse_ozon.py ...`. Для запуска контейнера с уже подготовленными cookies используйте команду `docker compose run --build --rm parser ...` из раздела PostgreSQL. Локальный `--csv output/products.csv` сохраняет файл на хосте; контейнеру для экспорта на хост потребуется отдельный bind mount.
 
 Один `requests.Session` загружает сохранённые cookies и делает запросы карточек. Только успешно распознанные товары записываются в PostgreSQL. При ошибке хотя бы одного SKU команда завершается с кодом 1 и пишет ошибку в лог. CSV содержит успешно записанные товары из данного запуска.
 
@@ -97,6 +103,10 @@ TEST_DATABASE_URL=postgresql+psycopg://ozon:local_only_change_me@localhost:5432/
 ```
 
 Тесты требуют PostgreSQL-базу с именем, заканчивающимся на `_test`. Схема создаётся Alembic, изменения каждого теста откатываются отдельной транзакцией. Основную БД использовать нельзя. Проверяются миграция, INSERT, повторный SKU, Decimal/price, rating/reviews, NULL, rich content, media counts, created_at и восстановление после ошибки записи.
+
+## Финальная проверка перед сдачей
+
+При доступной разрешённой авторизации нужно последовательно: получить OAuth token Gmail на привязанном аккаунте; запустить `uv run python scripts/get_cookies.py`; убедиться в успешном входе по защищённому ресурсу; применить миграцию; выполнить парсер по доступному SKU; повторить запуск того же SKU; через `SELECT` проверить поля, обновление строки и отсутствие дубля. Сначала проверьте формат реального HTML на обезличенной локальной копии через `--html-file`, затем выполните полный live-прогон и проверьте, что в логах и Git нет секретов. До этих шагов результат синтетических тестов не доказывает корректную работу на живом Ozon.
 
 ## Ограничения
 
