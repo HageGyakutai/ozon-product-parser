@@ -12,7 +12,7 @@ from .models import Product
 def number(value):
     if value is None or value == "":
         return None
-    cleaned = re.sub(r"[^0-9,.]", "", str(value).replace("\u00a0", ""))
+    cleaned = re.sub(r"[^0-9,.\-]", "", str(value).replace("\u00a0", ""))
     if not cleaned:
         return None
     if "," in cleaned and "." in cleaned:
@@ -73,7 +73,7 @@ def characteristics(node):
             for field, aliases in {
                 "color": ("цвет", "color"),
                 "material": ("материал", "material"),
-                "art_set": ("комплектация", "состав набора", "art set"),
+                "art_set": ("артикул производителя", "комплектация", "состав набора", "art set"),
             }.items():
                 if name in aliases:
                     result[field] = str(value)
