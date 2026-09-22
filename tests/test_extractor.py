@@ -216,10 +216,13 @@ def test_json_characteristics_have_priority_over_dom_fallback():
 
 
 def test_gallery_state_fills_media_counts_when_json_product_omits_them():
-    page = embedded({"@type": "Product", "sku": "123", "name": "Item"}) + """
+    page = (
+        embedded({"@type": "Product", "sku": "123", "name": "Item"})
+        + """
     <div id="state-webGallery-123"
          data-state='{"images":[{"src":"a"},{"src":"b"},{"src":"c"}],"videos":[{"url":"v"}]}'></div>
     """
+    )
     item = extract_product(page, "123")
     assert item.photos_seller == 3
     assert item.videos_seller == 1
@@ -233,23 +236,32 @@ def test_explicit_product_media_counts_have_priority_over_gallery_state():
         "photosSeller": 7,
         "videosSeller": 2,
     }
-    page = embedded(state) + """
+    page = (
+        embedded(state)
+        + """
     <div id="state-webGallery-123"
          data-state='{"images":[{"src":"a"}],"videos":[]}'></div>
     """
+    )
     item = extract_product(page, "123")
     assert (item.photos_seller, item.videos_seller) == (7, 2)
 
 
 def test_web_description_media_marks_rich_content():
-    page = embedded({"@type": "Product", "sku": "123", "name": "Item"}) + """
+    page = (
+        embedded({"@type": "Product", "sku": "123", "name": "Item"})
+        + """
     <div data-widget="webDescription"><img src="description.jpg"></div>
     """
+    )
     assert extract_product(page, "123").has_rich_content is True
 
 
 def test_plain_web_description_does_not_mark_rich_content():
-    page = embedded({"@type": "Product", "sku": "123", "name": "Item"}) + """
+    page = (
+        embedded({"@type": "Product", "sku": "123", "name": "Item"})
+        + """
     <div data-widget="webDescription">Plain description</div>
     """
+    )
     assert extract_product(page, "123").has_rich_content is False
