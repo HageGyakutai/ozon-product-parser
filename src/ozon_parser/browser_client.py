@@ -91,9 +91,9 @@ class BrowserProductClient:
                 context_options["user_agent"] = user_agent
             self._context = self._browser.new_context(**context_options)
             self._context.add_cookies(browser_cookies)
-        except Exception:
+        except Exception as exc:
             self.close()
-            raise
+            raise RuntimeError(f"Cannot start browser transport: {exc}") from exc
 
     def fetch_product(self, sku: str) -> str:
         page = self._context.new_page()
