@@ -1,5 +1,7 @@
 # Ozon Product Parser
 
+Подробное соответствие заданию и незавершённые проверки: [аудит](docs/task-audit.md).
+
 Учебное тестовое решение: авторизованная сессия Ozon, извлечение встроенного JSON из HTML карточек, сохранение товаров в PostgreSQL с UPSERT по SKU. CSV доступен дополнительно.
 
 **Статус:** структура JSON в реальных карточках, авторизация и полный запуск с PostgreSQL пока не подтверждены. Без проверки с авторизованной сессией этот проект нельзя считать готовым к сдаче работодателю. В WSL Ozon возвращает `Antibot Challenge Page` как Chromium, так и Firefox ещё до авторизации; HTML карточки не получен. Обработчик JSON покрыт локальными примерами Schema.org Product, проверяет совпадение SKU и не сохраняет HTML блокировки как товар. Отдельные поля `photos_seller` и `videos_seller` могут отсутствовать в Schema.org: число картинок в `image` не обязательно соответствует числу фотографий продавца. Эти поля следует сверить с реальным Ozon JSON перед сдачей.
@@ -78,7 +80,7 @@ docker compose exec postgres createdb -U ozon ozon_test
 TEST_DATABASE_URL=postgresql+psycopg://ozon:local_only_change_me@localhost:5432/ozon_test uv run pytest -q
 ```
 
-Тест удаляет созданную таблицу `products` после выполнения; **не используйте основную БД** для `TEST_DATABASE_URL`.
+Тесты требуют PostgreSQL-базу с именем, заканчивающимся на `_test`. Схема создаётся Alembic, изменения каждого теста откатываются отдельной транзакцией. Основную БД использовать нельзя. Проверяются миграция, INSERT, повторный SKU, Decimal/price, rating/reviews, NULL, rich content, media counts, created_at и восстановление после ошибки записи.
 
 ## Ограничения
 
