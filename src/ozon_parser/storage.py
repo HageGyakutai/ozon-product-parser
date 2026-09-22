@@ -53,5 +53,9 @@ def save_product(session: Session, product: Product) -> None:
             "updated_at": func.now(),
         },
     )
-    session.execute(statement)
-    session.commit()
+    try:
+        session.execute(statement)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
