@@ -82,10 +82,17 @@ def main() -> None:
     )
     LOGGER.info("Starting Ozon authentication")
     with sync_playwright() as playwright:
+        browser_name = os.getenv("OZON_BROWSER", "chromium").strip().lower()
+        if browser_name not in {"chromium", "firefox", "webkit"}:
+            raise ValueError("OZON_BROWSER must be chromium, firefox or webkit")
         channel = os.getenv("OZON_BROWSER_CHANNEL", "").strip()
         if channel and channel not in {"chrome", "msedge"}:
             raise ValueError("OZON_BROWSER_CHANNEL must be chrome or msedge")
-        browser = playwright.chromium.launch(headless=False, channel=channel or None)
+        if channel and browser_name != "chromium":
+            raise ValueError("OZON_BROWSER_CHANNEL is available only with OZON_BROWSER=chromium")
+        browser = getattr(playwright, browser_name).launch(
+            headless=False, **({"channel": channel} if channel else {})
+        )
         try:
             context = browser.new_context(locale="ru-RU")
             authenticate(context, phone, gmail)
