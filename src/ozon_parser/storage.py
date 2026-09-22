@@ -28,8 +28,12 @@ class ProductRow(Base):
     material: Mapped[str | None] = mapped_column(Text)
     art_set: Mapped[str | None] = mapped_column(Text)
     has_rich_content: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 def database_engine():
@@ -44,7 +48,10 @@ def save_product(session: Session, product: Product) -> None:
     statement = insert(ProductRow).values(**values)
     statement = statement.on_conflict_do_update(
         index_elements=[ProductRow.sku],
-        set_={**{key: statement.excluded[key] for key in values if key != "sku"}, "updated_at": func.now()},
+        set_={
+            **{key: statement.excluded[key] for key in values if key != "sku"},
+            "updated_at": func.now(),
+        },
     )
     session.execute(statement)
     session.commit()
