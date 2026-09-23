@@ -4,6 +4,8 @@ import importlib.util
 from pathlib import Path
 from unittest.mock import Mock
 
+import pytest
+
 
 def load_login_script():
     path = Path(__file__).resolve().parents[1] / "scripts" / "get_cookies.py"
@@ -34,3 +36,19 @@ def test_login_page_reuses_existing_open_tab():
 
     assert login.login_page(context) is page
     context.new_page.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("pattern", "label"),
+    [
+        (login.ANALYTICS_BUTTON_NAME, "Перейти к аналитике"),
+        (login.ANALYTICS_BUTTON_NAME, "Go to Analytics"),
+        (login.PHONE_SUBMIT_BUTTON_NAME, "Продолжить"),
+        (login.PHONE_SUBMIT_BUTTON_NAME, "Continue"),
+        (login.PHONE_SUBMIT_BUTTON_NAME, "Sign in"),
+        (login.CODE_SUBMIT_BUTTON_NAME, "Подтвердить"),
+        (login.CODE_SUBMIT_BUTTON_NAME, "Confirm"),
+    ],
+)
+def test_login_button_patterns_support_russian_and_english(pattern, label):
+    assert pattern.search(label)
