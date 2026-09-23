@@ -51,6 +51,9 @@ class FakeBrowser:
 
 
 def setup_login(monkeypatch, tmp_path):
+    # Unit tests must never inherit credentials or browser settings from a
+    # developer's real local .env file.
+    monkeypatch.setattr(login, "load_dotenv", lambda: None)
     browser = FakeBrowser()
     playwright = SimpleNamespace(
         chromium=SimpleNamespace(launch=lambda **kwargs: browser),
@@ -72,6 +75,8 @@ def setup_login(monkeypatch, tmp_path):
     monkeypatch.setenv("OZON_COOKIES_FILE", str(tmp_path / "cookies.json"))
     monkeypatch.delenv("OZON_BROWSER", raising=False)
     monkeypatch.delenv("OZON_BROWSER_CHANNEL", raising=False)
+    monkeypatch.delenv("OZON_CDP_ENDPOINT", raising=False)
+    monkeypatch.delenv("OZON_CDP_URL", raising=False)
     return browser, tmp_path / "cookies.json"
 
 
