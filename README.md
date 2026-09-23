@@ -194,44 +194,73 @@ uv run python scripts/parse_ozon.py \
 Ozon может вернуть HTTP 403 автоматическому HTTP-клиенту даже с действительными
 cookies. В таком случае используйте проверенный `--transport browser`.
 
-## 4. Ежедневный запуск через Airflow
+## 4. Ежедневный запуск через Airflow в Docker
 
-Airflow установлен в отдельной группе зависимостей и не нужен для обычного
-ручного запуска парсера:
-
-```bash
-uv sync --locked --group airflow
-```
-
-Перед первым запуском Airflow один раз получите cookies:
+Сначала один раз получите cookies на основной системе:
 
 ```bash
 uv run python scripts/get_cookies.py
 ```
 
-Список товаров для ежедневного запуска задаётся в `.env` через запятую или
-пробел:
+Файл `cookies.json` должен существовать до запуска контейнера. Список товаров
+задаётся в `.env`:
 
 ```dotenv
 OZON_AIRFLOW_SKUS=2359066702,2829800382
 ```
 
-Запустите локальный Airflow:
+Если локальный `airflow standalone` уже запущен, остановите его через
+`Ctrl+C`, чтобы освободить порт 8080. Затем соберите и запустите Airflow,
+Chromium и PostgreSQL в фоне:
 
 ```bash
-export AIRFLOW_HOME="$PWD/.airflow"
-export AIRFLOW__CORE__DAGS_FOLDER="$PWD/dags"
-uv run --group airflow airflow standalone
+docker compose --profile airflow up -d --build airflow
 ```
 
-Откройте адрес, указанный Airflow в терминале, и включите DAG
-`ozon_products_daily`. Он запускается ежедневно в 06:00 UTC, использует
-browser-транспорт и сохраняет результат в PostgreSQL. Первый запуск можно
-выполнить вручную из интерфейса Airflow.
+Проверка состояния и просмотр логов:
 
-DAG не запрашивает код авторизации ежедневно. Он использует сохранённый
-`cookies.json`. Если сессия Ozon истекла, задача завершится ошибкой: повторно
-запустите `get_cookies.py`, после чего перезапустите задачу Airflow.
+```bash
+docker compose ps
+docker compose logs -f airflow
+```
+
+Команда просмотра логов не останавливает контейнер. Для выхода нажмите
+`Ctrl+C`.
+
+Интерфейс доступен по адресу <http://localhost:8080>. Имя пользователя:
+
+```text
+admin
+```
+
+Airflow создаёт случайный пароль при первом запуске и сохраняет его в
+постоянном Docker volume. Посмотреть пароль:
+
+```bash
+docker compose exec airflow \
+  cat /opt/airflow/simple_auth_manager_passwords.json.generated
+```
+
+Включить и проверить DAG можно через интерфейс либо командами:
+
+```bash
+docker compose exec airflow airflow dags unpause ozon_products_daily
+docker compose exec airflow airflow dags trigger ozon_products_daily
+```
+
+DAG запускается ежедневно в 06:00 UTC, открывает Chromium внутри того же
+контейнера и сохраняет товары в PostgreSQL. Логи Airflow, его служебная база и
+профиль Chromium сохраняются в Docker volumes.
+
+DAG использует подключённый только для чтения `cookies.json`. Если сессия
+Ozon истекла, остановите Airflow, повторно выполните `get_cookies.py` на
+основной системе и снова запустите контейнер:
+
+```bash
+docker compose stop airflow
+uv run python scripts/get_cookies.py
+docker compose --profile airflow up -d airflow
+```
 
 ## Проверки качества
 
@@ -273,6 +302,7 @@ src/ozon_parser/
   storage.py           SQLAlchemy и UPSERT
   database_runtime.py  healthcheck PostgreSQL и Alembic
   airflow_task.py       запуск существующего CLI из Airflow
+Dockerfile.airflow      образ Airflow с Chromium
 alembic/               миграции PostgreSQL
 tests/                 автоматические тесты
 ```
@@ -287,5 +317,5 @@ tests/                 автоматические тесты
 - `cookies.json`;
 - содержимое писем и коды подтверждения.
 
-CDP слушает только локальный адрес `127.0.0.1`. Проект не обходит CAPTCHA и
+CDP слушает только локальный адрес `127.0.0.1` на основной системе или внутри контейнера. Проект не обходит CAPTCHA и
 не должен использоваться для нарушения правил Ozon.

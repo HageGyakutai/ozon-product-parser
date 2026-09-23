@@ -44,6 +44,38 @@ def test_ensure_cdp_browser_starts_chrome_and_waits(monkeypatch, tmp_path):
     assert captured["start_new_session"] is True
 
 
+def test_headless_chrome_flags(monkeypatch, tmp_path):
+    states = iter([False, True])
+    captured = {}
+    monkeypatch.setattr(cdp_browser, "cdp_is_ready", lambda endpoint: next(states))
+    monkeypatch.setattr(cdp_browser, "_chrome_executable", lambda: "/usr/bin/chromium")
+    monkeypatch.setenv("OZON_CHROME_PROFILE", str(tmp_path / "profile"))
+    monkeypatch.setenv("OZON_CHROME_HEADLESS", "true")
+    monkeypatch.setattr(cdp_browser.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr(
+        cdp_browser.subprocess,
+        "Popen",
+        lambda command, **kwargs: captured.setdefault(
+            "process", SimpleNamespace(command=command, poll=lambda: None)
+        ),
+    )
+
+    cdp_browser.ensure_cdp_browser("http://127.0.0.1:9222", start_url="https://www.ozon.ru/")
+
+    command = captured["process"].command
+    assert "--headless=new" in command
+    assert "--no-sandbox" in command
+    assert "--disable-dev-shm-usage" in command
+
+
+@pytest.mark.parametrize("value", ["maybe", "enabled"])
+def test_invalid_headless_value_is_rejected(monkeypatch, value):
+    monkeypatch.setenv("OZON_CHROME_HEADLESS", value)
+
+    with pytest.raises(RuntimeError, match="OZON_CHROME_HEADLESS"):
+        cdp_browser._headless_enabled()
+
+
 def test_automatic_start_rejects_remote_endpoint(monkeypatch):
     monkeypatch.setattr(cdp_browser, "cdp_is_ready", lambda endpoint: False)
 
