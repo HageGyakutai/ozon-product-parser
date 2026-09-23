@@ -2,18 +2,32 @@
 
 import time
 from pathlib import Path
+from typing import Literal, NotRequired, TypedDict
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Browser, BrowserContext, Playwright, sync_playwright
 
 from .auth_guard import blocked_page_text
 from .cdp_browser import ensure_cdp_browser
 from .session_data import load_browser_session, ozon_cookie_domain
 
 
-def _playwright_cookies(cookies: list[dict]) -> list[dict]:
+class BrowserCookie(TypedDict):
+    """Cookie fields accepted by Playwright's BrowserContext.add_cookies."""
+
+    name: str
+    value: str
+    domain: str
+    path: str
+    secure: bool
+    expires: NotRequired[float]
+    httpOnly: NotRequired[bool]
+    sameSite: NotRequired[Literal["Strict", "Lax", "None"]]
+
+
+def _playwright_cookies(cookies: list[dict]) -> list[BrowserCookie]:
     now = time.time()
-    result = []
-    same_site_map = {
+    result: list[BrowserCookie] = []
+    same_site_map: dict[str, Literal["Strict", "Lax", "None"]] = {
         "strict": "Strict",
         "lax": "Lax",
         "none": "None",
@@ -27,13 +41,18 @@ def _playwright_cookies(cookies: list[dict]) -> list[dict]:
         path = item.get("path", "/")
         secure = item.get("secure", False)
         expires = item.get("expires")
-        if not isinstance(name, str) or not name or not isinstance(value, str):
+        if (
+            not isinstance(name, str)
+            or not name
+            or not isinstance(value, str)
+            or not isinstance(domain, str)
+        ):
             continue
         if not isinstance(path, str) or not path.startswith("/"):
             continue
         if type(secure) is not bool:
             continue
-        cookie = {
+        cookie: BrowserCookie = {
             "name": name,
             "value": value,
             "domain": domain,
@@ -84,29 +103,32 @@ class BrowserProductClient:
         if not browser_cookies:
             raise ValueError("No usable Ozon cookies for browser transport")
 
-        self._playwright = sync_playwright().start()
-        self._browser = None
-        self._context = None
+        playwright = sync_playwright().start()
+        self._playwright: Playwright | None = playwright
+        self._browser: Browser | None = None
+        self._context: BrowserContext | None = None
         self._owns_browser = False
         self._owns_context = False
         try:
             if cdp_endpoint:
                 ensure_cdp_browser(cdp_endpoint, start_url="https://www.ozon.ru/")
-                self._browser = self._playwright.chromium.connect_over_cdp(cdp_endpoint)
+                self._browser = playwright.chromium.connect_over_cdp(cdp_endpoint)
                 if not self._browser.contexts:
                     raise RuntimeError("Connected Chrome has no default browser context")
                 self._context = self._browser.contexts[0]
             else:
-                launcher = getattr(self._playwright, browser_name)
+                launcher = getattr(playwright, browser_name)
                 launch_options: dict[str, object] = {"headless": headless}
                 if channel:
                     launch_options["channel"] = channel
                 self._browser = launcher.launch(**launch_options)
                 self._owns_browser = True
-                context_options = {"locale": "ru-RU"}
                 if user_agent:
-                    context_options["user_agent"] = user_agent
-                self._context = self._browser.new_context(**context_options)
+                    self._context = self._browser.new_context(
+                        locale="ru-RU", user_agent=user_agent
+                    )
+                else:
+                    self._context = self._browser.new_context(locale="ru-RU")
                 self._owns_context = True
             assert self._context is not None
             self._context.add_cookies(browser_cookies)
