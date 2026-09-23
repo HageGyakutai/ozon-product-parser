@@ -30,15 +30,38 @@ def current_page(context):
     return next((page for page in reversed(context.pages) if not page.is_closed()), None)
 
 
+def login_page(context):
+    """Return an open page, creating the initial tab for a fresh context."""
+    return current_page(context) or context.new_page()
+
+
 def authenticate(context, phone: str, gmail) -> None:
-    page = current_page(context)
-    page.goto("https://data.ozon.ru/", wait_until="domcontentloaded", timeout=30000)
+    page = login_page(context)
+    if not page.url.startswith("https://data.ozon.ru/"):
+        # Ozon can keep loading background resources for a long time. Waiting for
+        # the navigation commit is enough; the locator below verifies UI readiness.
+        page.goto("https://data.ozon.ru/", wait_until="commit", timeout=30000)
+    else:
+        LOGGER.info("Reusing data.ozon.ru page already open in Chrome")
     ensure_not_blocked(context)
-    page.get_by_role("button", name=re.compile("Перейти к аналитике", re.I)).first.click()
+    analytics_button = page.get_by_role(
+        "button", name=re.compile("Перейти к аналитике", re.I)
+    ).first
+    analytics_button.wait_for(state="visible", timeout=30000)
+    analytics_button.click()
+    page.wait_for_url(
+        re.compile(r"^https://sso\.ozon\.ru/"),
+        wait_until="commit",
+        timeout=30000,
+    )
     page = current_page(context)
     ensure_not_blocked(context)
-    phone_input = page.get_by_placeholder(re.compile(r"9999|телефон", re.I))
-    phone_input.wait_for(state="visible", timeout=15000)
+    # The current Ozon ID form exposes no placeholder attribute. Waiting on
+    # the semantic input selector also avoids racing the page's DOM rendering.
+    phone_input = page.locator(
+        'input[type="tel"], input[autocomplete="tel"], input[name*="phone" i]'
+    ).first
+    phone_input.wait_for(state="visible", timeout=30000)
     phone_input.fill(phone)
     started = datetime.now(UTC)
     page.get_by_role("button", name=re.compile(r"^Войти$|Продолжить", re.I)).click()
@@ -49,8 +72,10 @@ def authenticate(context, phone: str, gmail) -> None:
     LOGGER.info("New Gmail verification email received")
     page = current_page(context)
     ensure_not_blocked(context)
-    code_input = page.get_by_role("textbox", name=re.compile("код|code", re.I))
-    code_input.wait_for(state="visible", timeout=15000)
+    # Ozon renders the confirmation control without an accessible name.
+    # At this step the verification code is the only visible input.
+    code_input = page.locator("input:visible").first
+    code_input.wait_for(state="visible", timeout=30000)
     code_input.fill(code)
     # Ozon may submit automatically after the last digit.
     try:
@@ -91,11 +116,26 @@ def main() -> None:
             raise ValueError("OZON_BROWSER_CHANNEL must be chrome or msedge")
         if channel and browser_name != "chromium":
             raise ValueError("OZON_BROWSER_CHANNEL is available only with OZON_BROWSER=chromium")
-        browser = getattr(playwright, browser_name).launch(
-            headless=False, **({"channel": channel} if channel else {})
+        cdp_url = (
+            os.getenv("OZON_CDP_ENDPOINT", "").strip()
+            or os.getenv("OZON_CDP_URL", "").strip()
         )
-        try:
+        if cdp_url:
+            if browser_name != "chromium":
+                raise ValueError("OZON_CDP_URL is available only with OZON_BROWSER=chromium")
+            LOGGER.info("Connecting to an existing Chrome session via CDP")
+            browser = playwright.chromium.connect_over_cdp(cdp_url)
+            if not browser.contexts:
+                raise RuntimeError("Connected Chrome has no browser context")
+            context = browser.contexts[0]
+            owns_browser = False
+        else:
+            browser = getattr(playwright, browser_name).launch(
+                headless=False, **({"channel": channel} if channel else {})
+            )
             context = browser.new_context(locale="ru-RU")
+            owns_browser = True
+        try:
             authenticate(context, phone, gmail)
             cookies = [
                 cookie for cookie in context.cookies() if ozon_cookie_domain(cookie.get("domain"))
@@ -110,7 +150,8 @@ def main() -> None:
             save_browser_session(path, cookies, user_agent)
             LOGGER.info("Ozon login completed; cookies saved")
         finally:
-            browser.close()
+            if owns_browser:
+                browser.close()
 
 
 if __name__ == "__main__":
