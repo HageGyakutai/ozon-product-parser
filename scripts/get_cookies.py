@@ -117,7 +117,9 @@ def main() -> None:
             raise ValueError("OZON_BROWSER_CHANNEL must be chrome or msedge")
         if channel and browser_name != "chromium":
             raise ValueError("OZON_BROWSER_CHANNEL is available only with OZON_BROWSER=chromium")
-        cdp_url = os.getenv("OZON_CDP_ENDPOINT", "").strip() or os.getenv("OZON_CDP_URL", "").strip()
+        cdp_url = (
+            os.getenv("OZON_CDP_ENDPOINT", "").strip() or os.getenv("OZON_CDP_URL", "").strip()
+        )
         if cdp_url:
             if browser_name != "chromium":
                 raise ValueError("OZON_CDP_URL is available only with OZON_BROWSER=chromium")
