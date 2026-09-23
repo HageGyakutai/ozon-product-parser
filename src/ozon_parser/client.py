@@ -1,3 +1,5 @@
+"""HTTP product transport backed by the authenticated Ozon session."""
+
 import time
 from pathlib import Path
 
@@ -11,6 +13,7 @@ from .session_data import load_browser_session, ozon_cookie_domain
 
 
 def product_session(cookies_file: str = "cookies.json") -> requests.Session:
+    """Build a requests session from cookies produced by get_cookies.py."""
     path = Path(cookies_file)
     if not path.is_file():
         raise FileNotFoundError(f"{path} missing; authenticate first")
@@ -72,6 +75,7 @@ def product_session(cookies_file: str = "cookies.json") -> requests.Session:
 
 
 def fetch_product(session: requests.Session, sku: str) -> str:
+    """Download one product page and reject login, antibot and HTTP errors."""
     response = session.get(f"https://www.ozon.ru/product/{sku}/", timeout=20)
     blocked = "antibot challenge" in response.text[:10000].casefold() or blocked_page_text(
         response.text
