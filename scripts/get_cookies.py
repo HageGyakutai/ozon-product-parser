@@ -102,11 +102,23 @@ def main() -> None:
             raise ValueError("OZON_BROWSER_CHANNEL must be chrome or msedge")
         if channel and browser_name != "chromium":
             raise ValueError("OZON_BROWSER_CHANNEL is available only with OZON_BROWSER=chromium")
-        browser = getattr(playwright, browser_name).launch(
-            headless=False, **({"channel": channel} if channel else {})
-        )
-        try:
+        cdp_url = os.getenv("OZON_CDP_URL", "").strip()
+        if cdp_url:
+            if browser_name != "chromium":
+                raise ValueError("OZON_CDP_URL is available only with OZON_BROWSER=chromium")
+            LOGGER.info("Connecting to an existing Chrome session via CDP")
+            browser = playwright.chromium.connect_over_cdp(cdp_url)
+            if not browser.contexts:
+                raise RuntimeError("Connected Chrome has no browser context")
+            context = browser.contexts[0]
+            owns_browser = False
+        else:
+            browser = getattr(playwright, browser_name).launch(
+                headless=False, **({"channel": channel} if channel else {})
+            )
             context = browser.new_context(locale="ru-RU")
+            owns_browser = True
+        try:
             authenticate(context, phone, gmail)
             cookies = [
                 cookie for cookie in context.cookies() if ozon_cookie_domain(cookie.get("domain"))
@@ -121,7 +133,8 @@ def main() -> None:
             save_browser_session(path, cookies, user_agent)
             LOGGER.info("Ozon login completed; cookies saved")
         finally:
-            browser.close()
+            if owns_browser:
+                browser.close()
 
 
 if __name__ == "__main__":
