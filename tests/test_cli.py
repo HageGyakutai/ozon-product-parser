@@ -83,6 +83,8 @@ def setup_login(monkeypatch, tmp_path):
     ],
 )
 def test_login_rejects_missing_or_invalid_phone(monkeypatch, phone, error):
+    # Keep the test independent from a developer's real local .env file.
+    monkeypatch.setattr(login, "load_dotenv", lambda: None)
     if phone is None:
         monkeypatch.delenv("OZON_PHONE", raising=False)
     else:
