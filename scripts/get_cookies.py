@@ -11,6 +11,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 from ozon_parser.auth_guard import blocked_page_text
+from ozon_parser.cdp_browser import ensure_cdp_browser
 from ozon_parser.gmail import gmail_service, wait_for_code
 from ozon_parser.session_data import ozon_cookie_domain, save_browser_session
 
@@ -123,7 +124,8 @@ def main() -> None:
         if cdp_url:
             if browser_name != "chromium":
                 raise ValueError("OZON_CDP_URL is available only with OZON_BROWSER=chromium")
-            LOGGER.info("Connecting to an existing Chrome session via CDP")
+            ensure_cdp_browser(cdp_url, start_url="https://data.ozon.ru/")
+            LOGGER.info("Connecting to Chrome session via CDP")
             browser = playwright.chromium.connect_over_cdp(cdp_url)
             if not browser.contexts:
                 raise RuntimeError("Connected Chrome has no browser context")
