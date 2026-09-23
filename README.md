@@ -32,7 +32,7 @@ PostgreSQL 16, Alembic, Docker Compose, Airflow, pytest, Ruff и mypy.
 - Python 3.12.x;
 - [uv](https://docs.astral.sh/uv/);
 - Docker с Docker Compose;
-- Google Chrome или Chromium;
+- доступ в интернет для первой автоматической установки Chromium;
 - Gmail, на который Ozon отправляет код подтверждения.
 
 ## Установка
@@ -45,10 +45,15 @@ uv sync --locked
 cp .env.example .env
 ```
 
-Chrome должен быть установлен в системе. Скрипт автоматически ищет
-`google-chrome-stable`, `google-chrome`, `chromium` или
-`chromium-browser`. Если браузер установлен в другом месте, укажите полный
-путь через `OZON_CHROME_EXECUTABLE`.
+Скрипт сначала использует системный `google-chrome-stable`, `google-chrome`,
+`chromium` или `chromium-browser`. Если браузера нет, при первом запуске
+автоматически скачивается Chromium из Playwright. Повторная установка не
+выполняется. Если браузер уже установлен в другом месте, укажите полный путь
+через `OZON_CHROME_EXECUTABLE`.
+
+На минимальной Linux-системе могут отсутствовать нативные библиотеки браузера.
+В таком случае один раз выполните `uv run playwright install-deps chromium`
+с правами, необходимыми менеджеру пакетов системы.
 
 ## Настройка Gmail API
 

@@ -95,6 +95,59 @@ def test_configured_chrome_must_exist(monkeypatch, tmp_path):
         cdp_browser._chrome_executable()
 
 
+def test_chrome_executable_uses_installed_playwright_browser(monkeypatch, tmp_path):
+    executable = tmp_path / "playwright-chromium"
+    executable.touch()
+    monkeypatch.delenv("OZON_CHROME_EXECUTABLE", raising=False)
+    monkeypatch.setattr(cdp_browser.shutil, "which", lambda name: None)
+    monkeypatch.setattr(
+        cdp_browser,
+        "_playwright_chromium_executable",
+        lambda: str(executable),
+    )
+
+    assert cdp_browser._chrome_executable() == str(executable)
+
+
+def test_chrome_executable_installs_playwright_browser(monkeypatch):
+    monkeypatch.delenv("OZON_CHROME_EXECUTABLE", raising=False)
+    monkeypatch.setattr(cdp_browser.shutil, "which", lambda name: None)
+    monkeypatch.setattr(cdp_browser, "_playwright_chromium_executable", lambda: None)
+    monkeypatch.setattr(
+        cdp_browser,
+        "_install_playwright_chromium",
+        lambda: "/cache/playwright/chromium",
+    )
+
+    assert cdp_browser._chrome_executable() == "/cache/playwright/chromium"
+
+
+def test_playwright_installation_uses_current_python(monkeypatch, tmp_path):
+    executable = tmp_path / "chromium"
+    executable.touch()
+    captured = {}
+    monkeypatch.setattr(
+        cdp_browser.subprocess,
+        "run",
+        lambda command, **kwargs: captured.update(command=command, **kwargs),
+    )
+    monkeypatch.setattr(
+        cdp_browser,
+        "_playwright_chromium_executable",
+        lambda: str(executable),
+    )
+
+    assert cdp_browser._install_playwright_chromium() == str(executable)
+    assert captured["command"] == [
+        cdp_browser.sys.executable,
+        "-m",
+        "playwright",
+        "install",
+        "chromium",
+    ]
+    assert captured["check"] is True
+
+
 @pytest.mark.parametrize("value", ["not-a-number", "-1", "31"])
 def test_invalid_startup_delay_is_rejected(monkeypatch, value):
     monkeypatch.setenv("OZON_CHROME_STARTUP_DELAY", value)
