@@ -22,36 +22,5 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-  parser-db:
-    build: .
-    profiles: ["parse"]
-    environment:
-      DATABASE_URL: postgresql+psycopg://ozon:local_only_change_me@postgres:5432/ozon
-      OZON_COOKIES_FILE: /app/cookies.json
-    volumes:
-      - type: bind
-        source: ./cookies.json
-        target: /app/cookies.json
-        read_only: true
-        bind:
-          create_host_path: false
-    entrypoint: ["python", "scripts/parse_ozon.py"]
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-  parser-csv:
-    build: .
-    profiles: ["parse"]
-    environment:
-      OZON_COOKIES_FILE: /app/cookies.json
-    volumes:
-      - type: bind
-        source: ./cookies.json
-        target: /app/cookies.json
-        read_only: true
-        bind:
-          create_host_path: false
-      - ./output:/app/output
-    entrypoint: ["python", "scripts/parse_ozon.py", "--output", "csv"]
 volumes:
   postgres_data:
