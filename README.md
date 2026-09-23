@@ -2,7 +2,7 @@
 
 Подробное соответствие заданию и незавершённые проверки: [аудит](docs/task-audit.md).
 
-Учебное тестовое решение: авторизованная сессия Ozon, извлечение встроенного JSON из HTML карточек, сохранение товаров в PostgreSQL с UPSERT по SKU. CSV доступен дополнительно.
+Учебное тестовое решение: авторизованная сессия Ozon, извлечение встроенного JSON из HTML карточек и явный выбор сохранения результата в PostgreSQL либо CSV.
 
 **Статус:** 23 сентября 2026 года на реальном аккаунте подтверждён полный вход: Ozon ID запросил код по номеру телефона, Gmail API нашёл новое письмо, скрипт ввёл код и сохранил cookies. Из-за Ozon AntiBot проверка выполнена через подключение Playwright к отдельному обычному Chrome по CDP; запуск нового автоматизированного браузера может быть заблокирован. Реальный HTML карточки также успешно разобран `extractor.py` и записан в PostgreSQL с повторным UPSERT. Live-загрузка карточек остаётся зависимой от антибот-защиты Ozon. GitHub Actions временно не запускается из-за исчерпанного лимита Actions, поэтому актуальная проверка выполняется локально.
 
@@ -40,7 +40,7 @@ cp .env.example .env
 Один запуск **после появления действительного `cookies.json`**: Compose поднимет PostgreSQL, дождётся статуса healthy, выполнит Alembic и только затем запустит парсер. Коды SKU передаются последними аргументами:
 
 ```bash
-docker compose run --build --rm parser 2359066702 2829800382
+docker compose run --build --rm parser-db 2359066702 2829800382 --output database
 ```
 
 Если cookies пока нет, можно одной командой подготовить только PostgreSQL и таблицу `products`:
@@ -49,7 +49,15 @@ docker compose run --build --rm parser 2359066702 2829800382
 docker compose up --build --exit-code-from migrate migrate
 ```
 
-После подготовки БД получение cookies выполняется в локальном Python-окружении (`get_cookies.py` запускает браузер), а парсер — через Compose либо локально. `docker compose run --build --rm parser ...` автоматически поднимает БД и миграцию при наличии файла cookies.
+После подготовки БД получение cookies выполняется в локальном Python-окружении (`get_cookies.py` запускает браузер), а парсер — через Compose либо локально. Сервис `parser-db` автоматически поднимает PostgreSQL, ожидает успешный healthcheck и выполнение миграций.
+
+Для сохранения только в CSV PostgreSQL не запускается:
+
+```bash
+docker compose run --build --rm parser-csv 2359066702 2829800382
+```
+
+Файл появится на хосте в `output/products.csv`.
 
 При запуске парсера контейнер читает локальный `cookies.json` только для чтения. Файл не копируется в Docker-образ. Без действительных cookies или при отказе Ozon парсер завершится ошибкой.
 
@@ -106,7 +114,8 @@ OZON_CDP_ENDPOINT=http://127.0.0.1:9222
 
 ```bash
 uv run python scripts/import_browser_cookies.py browser-cookies.json --user-agent 'строка navigator.userAgent'
-uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.csv
+uv run python scripts/parse_ozon.py 2359066702 2829800382 \
+  --output csv --csv output/products.csv
 ```
 
 Экспорт и `cookies.json` держите только локально, никому не отправляйте; после проверки удалите экспорт.
@@ -182,7 +191,7 @@ uv run python scripts/parse_ozon.py 2359066702 2829800382 --csv output/products.
 
 Для локального запуска сначала примените миграцию командой `docker compose up --build --exit-code-from migrate migrate`, затем настройте `.env` и выполните `uv run python scripts/parse_ozon.py ...`. Для запуска контейнера с уже подготовленными cookies используйте команду `docker compose run --build --rm parser ...` из раздела PostgreSQL. Локальный `--csv output/products.csv` сохраняет файл на хосте; контейнеру для экспорта на хост потребуется отдельный bind mount.
 
-Один `requests.Session` загружает сохранённые cookies и делает запросы карточек. Только успешно распознанные товары записываются в PostgreSQL. При ошибке хотя бы одного SKU команда завершается с кодом 1 и пишет ошибку в лог. CSV содержит успешно записанные товары из данного запуска.
+Один `requests.Session` загружает сохранённые cookies и делает запросы карточек. В режиме `--output database` успешно распознанные товары записываются в PostgreSQL. В режиме `--output csv` база не нужна, а результат сохраняется в указанный файл (по умолчанию `output/products.csv`). При ошибке хотя бы одного SKU команда завершается с кодом 1 и пишет ошибку в лог.
 
 Для работы с уже сохранённой HTML-карточкой без подключения к Ozon и без `cookies.json` укажите ровно один SKU. Используются тот же `extract_product()` и та же запись в PostgreSQL; база должна быть доступна и миграция применена:
 
