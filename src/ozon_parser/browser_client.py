@@ -2,8 +2,9 @@
 
 import time
 from pathlib import Path
-from typing import Literal, NotRequired, TypedDict
+from typing import Literal
 
+from playwright._impl._api_structures import SetCookieParam
 from playwright.sync_api import Browser, BrowserContext, Playwright, sync_playwright
 
 from .auth_guard import blocked_page_text
@@ -11,22 +12,9 @@ from .cdp_browser import ensure_cdp_browser
 from .session_data import load_browser_session, ozon_cookie_domain
 
 
-class BrowserCookie(TypedDict):
-    """Cookie fields accepted by Playwright's BrowserContext.add_cookies."""
-
-    name: str
-    value: str
-    domain: str
-    path: str
-    secure: bool
-    expires: NotRequired[float]
-    httpOnly: NotRequired[bool]
-    sameSite: NotRequired[Literal["Strict", "Lax", "None"]]
-
-
-def _playwright_cookies(cookies: list[dict]) -> list[BrowserCookie]:
+def _playwright_cookies(cookies: list[dict]) -> list[SetCookieParam]:
     now = time.time()
-    result: list[BrowserCookie] = []
+    result: list[SetCookieParam] = []
     same_site_map: dict[str, Literal["Strict", "Lax", "None"]] = {
         "strict": "Strict",
         "lax": "Lax",
@@ -52,7 +40,7 @@ def _playwright_cookies(cookies: list[dict]) -> list[BrowserCookie]:
             continue
         if type(secure) is not bool:
             continue
-        cookie: BrowserCookie = {
+        cookie: SetCookieParam = {
             "name": name,
             "value": value,
             "domain": domain,
