@@ -53,9 +53,8 @@ def ensure_cdp_browser(endpoint: str, *, start_url: str) -> bool:
         return False
 
     port = _local_cdp_port(endpoint)
-    profile = Path(
-        os.getenv("OZON_CHROME_PROFILE", str(DEFAULT_PROFILE))
-    ).expanduser()
+    profile_value = os.getenv("OZON_CHROME_PROFILE", "").strip() or str(DEFAULT_PROFILE)
+    profile = Path(profile_value).expanduser()
     profile.mkdir(parents=True, exist_ok=True)
     executable = _chrome_executable()
     LOGGER.info("Chrome CDP is unavailable; starting %s", executable)
