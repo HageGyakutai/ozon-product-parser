@@ -3,7 +3,6 @@
 from datetime import UTC, datetime, timedelta
 
 from airflow.sdk import dag, task
-
 from ozon_parser.airflow_task import run_daily_parser
 
 
