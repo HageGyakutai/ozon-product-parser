@@ -99,7 +99,11 @@ class BrowserProductClient:
         self._owns_context = False
         try:
             if cdp_endpoint:
-                ensure_cdp_browser(cdp_endpoint, start_url="https://www.ozon.ru/")
+                ensure_cdp_browser(
+                    cdp_endpoint,
+                    start_url="https://www.ozon.ru/",
+                    playwright_executable=playwright.chromium.executable_path,
+                )
                 self._browser = playwright.chromium.connect_over_cdp(cdp_endpoint)
                 if not self._browser.contexts:
                     raise RuntimeError("Connected Chrome has no default browser context")

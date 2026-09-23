@@ -24,14 +24,14 @@ def test_ensure_cdp_browser_starts_chrome_and_waits(monkeypatch, tmp_path):
     states = iter([False, False, True])
     captured = {}
     monkeypatch.setattr(cdp_browser, "cdp_is_ready", lambda endpoint: next(states))
-    monkeypatch.setattr(cdp_browser, "_chrome_executable", lambda: "/usr/bin/chrome")
+    monkeypatch.setattr(cdp_browser, "_chrome_executable", lambda expected_path=None: "/usr/bin/chrome")
     monkeypatch.setenv("OZON_CHROME_PROFILE", str(tmp_path / "profile"))
     monkeypatch.setattr(cdp_browser.time, "sleep", lambda seconds: None)
 
     def popen(command, **kwargs):
         captured["command"] = command
         captured.update(kwargs)
-        return SimpleNamespace(poll=lambda: None)
+        return SimpleNamespace(poll=lambda expected_path=None: None)
 
     monkeypatch.setattr(cdp_browser.subprocess, "Popen", popen)
 
@@ -48,7 +48,7 @@ def test_headless_chrome_flags(monkeypatch, tmp_path):
     states = iter([False, True])
     captured = {}
     monkeypatch.setattr(cdp_browser, "cdp_is_ready", lambda endpoint: next(states))
-    monkeypatch.setattr(cdp_browser, "_chrome_executable", lambda: "/usr/bin/chromium")
+    monkeypatch.setattr(cdp_browser, "_chrome_executable", lambda expected_path=None: "/usr/bin/chromium")
     monkeypatch.setenv("OZON_CHROME_PROFILE", str(tmp_path / "profile"))
     monkeypatch.setenv("OZON_CHROME_HEADLESS", "true")
     monkeypatch.setattr(cdp_browser.time, "sleep", lambda seconds: None)
@@ -56,7 +56,7 @@ def test_headless_chrome_flags(monkeypatch, tmp_path):
         cdp_browser.subprocess,
         "Popen",
         lambda command, **kwargs: captured.setdefault(
-            "process", SimpleNamespace(command=command, poll=lambda: None)
+            "process", SimpleNamespace(command=command, poll=lambda expected_path=None: None)
         ),
     )
 
@@ -104,7 +104,7 @@ def test_playwright_installation_waits_until_browser_appears(monkeypatch, tmp_pa
     monkeypatch.setattr(
         cdp_browser,
         "_playwright_chromium_executable",
-        lambda: next(results),
+        lambda expected_path=None: next(results),
     )
     monkeypatch.setattr(cdp_browser.time, "sleep", sleeps.append)
 
@@ -115,6 +115,13 @@ def test_playwright_installation_waits_until_browser_appears(monkeypatch, tmp_pa
     ]
 
 
+def test_expected_playwright_executable_avoids_nested_playwright(monkeypatch, tmp_path):
+    executable = tmp_path / "playwright-chromium"
+    executable.touch()
+
+    assert cdp_browser._playwright_chromium_executable(str(executable)) == str(executable)
+
+
 def test_chrome_executable_uses_installed_playwright_browser(monkeypatch, tmp_path):
     executable = tmp_path / "playwright-chromium"
     executable.touch()
@@ -123,7 +130,7 @@ def test_chrome_executable_uses_installed_playwright_browser(monkeypatch, tmp_pa
     monkeypatch.setattr(
         cdp_browser,
         "_playwright_chromium_executable",
-        lambda: str(executable),
+        lambda expected_path=None: str(executable),
     )
 
     assert cdp_browser._chrome_executable() == str(executable)
@@ -132,11 +139,11 @@ def test_chrome_executable_uses_installed_playwright_browser(monkeypatch, tmp_pa
 def test_chrome_executable_installs_playwright_browser(monkeypatch):
     monkeypatch.delenv("OZON_CHROME_EXECUTABLE", raising=False)
     monkeypatch.setattr(cdp_browser.shutil, "which", lambda name: None)
-    monkeypatch.setattr(cdp_browser, "_playwright_chromium_executable", lambda: None)
+    monkeypatch.setattr(cdp_browser, "_playwright_chromium_executable", lambda expected_path=None: None)
     monkeypatch.setattr(
         cdp_browser,
         "_install_playwright_chromium",
-        lambda: "/cache/playwright/chromium",
+        lambda expected_path=None: "/cache/playwright/chromium",
     )
 
     assert cdp_browser._chrome_executable() == "/cache/playwright/chromium"
@@ -154,7 +161,7 @@ def test_playwright_installation_uses_current_python(monkeypatch, tmp_path):
     monkeypatch.setattr(
         cdp_browser,
         "_playwright_chromium_executable",
-        lambda: str(executable),
+        lambda expected_path=None: str(executable),
     )
 
     assert cdp_browser._install_playwright_chromium() == str(executable)
