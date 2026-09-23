@@ -76,9 +76,13 @@ def run_probe(session: requests.Session, sku: str, *, mode: str) -> bool:
         f"https://www.ozon.ru/product/{sku}/",
         label=f"{mode}:product",
     )
-    return product is not None and product.status_code == 200 and not (
-        "antibot challenge" in product.text[:10000].casefold()
-        or blocked_page_text(product.text)
+    return (
+        product is not None
+        and product.status_code == 200
+        and not (
+            "antibot challenge" in product.text[:10000].casefold()
+            or blocked_page_text(product.text)
+        )
     )
 
 
