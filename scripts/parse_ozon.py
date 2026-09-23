@@ -6,6 +6,7 @@ import logging
 import os
 from collections.abc import Callable
 from contextlib import ExitStack
+from functools import partial
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -95,7 +96,7 @@ def main() -> None:
                 fetch_html = browser_client.fetch_product
             else:
                 http_session = stack.enter_context(product_session(cookies_file))
-                fetch_html = lambda sku: fetch_product(http_session, sku)
+                fetch_html = partial(fetch_product, http_session)
 
             database_session: Session | None = None
             if args.output == "database":
