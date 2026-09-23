@@ -30,8 +30,13 @@ def current_page(context):
     return next((page for page in reversed(context.pages) if not page.is_closed()), None)
 
 
+def login_page(context):
+    """Return an open page, creating the initial tab for a fresh context."""
+    return current_page(context) or context.new_page()
+
+
 def authenticate(context, phone: str, gmail) -> None:
-    page = current_page(context)
+    page = login_page(context)
     page.goto("https://data.ozon.ru/", wait_until="domcontentloaded", timeout=30000)
     ensure_not_blocked(context)
     page.get_by_role("button", name=re.compile("Перейти к аналитике", re.I)).first.click()
