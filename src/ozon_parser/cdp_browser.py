@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 from urllib.error import URLError
@@ -31,6 +32,39 @@ def _local_cdp_port(endpoint: str) -> int:
     return parsed.port or 80
 
 
+def _playwright_chromium_executable() -> str | None:
+    """Return the bundled Playwright Chromium path when it is installed."""
+    try:
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as playwright:
+            executable = Path(playwright.chromium.executable_path)
+    except Exception:  # Playwright reports driver/startup failures at runtime.
+        return None
+    return str(executable) if executable.is_file() else None
+
+
+def _install_playwright_chromium() -> str:
+    """Download Chromium into Playwright's user cache and return its path."""
+    LOGGER.info("Chrome/Chromium was not found; installing Playwright Chromium")
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium"],
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError(
+            "Playwright Chromium installation failed. Run "
+            "'uv run playwright install chromium' and retry."
+        ) from exc
+
+    executable = _playwright_chromium_executable()
+    if executable is None:
+        raise RuntimeError("Playwright installed Chromium but its executable was not found")
+    LOGGER.info("Playwright Chromium is ready at %s", executable)
+    return executable
+
+
 def _chrome_executable() -> str:
     configured = os.getenv("OZON_CHROME_EXECUTABLE", "").strip()
     if configured:
@@ -42,7 +76,11 @@ def _chrome_executable() -> str:
         executable = shutil.which(name)
         if executable:
             return executable
-    raise RuntimeError("Google Chrome/Chromium was not found. Set OZON_CHROME_EXECUTABLE in .env.")
+
+    playwright_executable = _playwright_chromium_executable()
+    if playwright_executable:
+        return playwright_executable
+    return _install_playwright_chromium()
 
 
 def _startup_delay() -> float:
