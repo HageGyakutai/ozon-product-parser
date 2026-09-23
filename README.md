@@ -99,9 +99,23 @@ Gmail token, cookies и результаты парсинга.
 
 ## 1. Получение cookies
 
+Основной проверенный вариант использует настоящий Chromium:
+
 ```bash
 uv run python scripts/get_cookies.py
 ```
+
+Экспериментальный вариант выполняет весь вход через `requests.Session`:
+
+```bash
+uv run python scripts/get_cookies_requests.py
+```
+
+Оба скрипта используют номер из `OZON_PHONE`, получают новый код через Gmail
+API и сохраняют совместимый `cookies.json`. HTTP-вариант работает только если
+текущая страница Ozon ID отдаёт обычные HTML-формы. Если вход реализован только
+JavaScript-запросами или защищён антиботом, скрипт завершится с понятной ошибкой,
+а браузерный вариант продолжит работать независимо.
 
 Скрипт:
 
@@ -198,18 +212,6 @@ uv run python scripts/parse_ozon.py \
 
 Ozon может вернуть HTTP 403 автоматическому HTTP-клиенту даже с действительными
 cookies. В таком случае используйте проверенный `--transport browser`.
-
-Для отдельной безопасной проверки доступа через `requests.Session`, не меняющей
-работу парсера, используйте:
-
-```bash
-uv run python scripts/probe_ozon_requests.py 2359066702
-```
-
-Скрипт сначала прогревает анонимную сессию на главной странице, затем
-запрашивает карточку товара. Если существует `cookies.json`, проверка
-повторяется с cookies и User-Agent сохранённой браузерной сессии. В лог
-выводятся только HTTP-статусы и признаки блокировки, без значений cookies.
 
 ## 4. Ежедневный запуск через Airflow в Docker
 
@@ -308,7 +310,8 @@ TEST_DATABASE_URL=postgresql+psycopg://ozon:local_only_change_me@localhost:5432/
 dags/
   ozon_products_daily.py ежедневный DAG Airflow
 scripts/
-  get_cookies.py       авторизация и сохранение cookies
+  get_cookies.py          авторизация через Chromium и сохранение cookies
+  get_cookies_requests.py авторизация через requests (эксперимент)
   parse_ozon.py        парсинг SKU и выбор хранилища
 src/ozon_parser/
   browser_client.py    загрузка карточек через Chrome
