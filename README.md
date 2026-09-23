@@ -99,27 +99,9 @@ Gmail token, cookies и результаты парсинга.
 
 ## 1. Получение cookies
 
-Основной проверенный вариант использует настоящий Chromium:
-
 ```bash
 uv run python scripts/get_cookies.py
 ```
-
-Экспериментальный вариант выполняет весь вход через requests-совместимую сессию
-`curl_cffi`, которая имитирует TLS/HTTP2-отпечаток Chrome:
-
-```bash
-uv run python scripts/get_cookies_requests.py
-```
-
-`curl_cffi` повышает шанс пройти первичную антибот-проверку, но не выполняет
-JavaScript и не гарантирует успешный вход на текущей версии Ozon ID.
-
-Оба скрипта используют номер из `OZON_PHONE`, получают новый код через Gmail
-API и сохраняют совместимый `cookies.json`. HTTP-вариант работает только если
-текущая страница Ozon ID отдаёт обычные HTML-формы. Если вход реализован только
-JavaScript-запросами или защищён антиботом, скрипт завершится с понятной ошибкой,
-а браузерный вариант продолжит работать независимо.
 
 Скрипт:
 
@@ -314,8 +296,7 @@ TEST_DATABASE_URL=postgresql+psycopg://ozon:local_only_change_me@localhost:5432/
 dags/
   ozon_products_daily.py ежедневный DAG Airflow
 scripts/
-  get_cookies.py          авторизация через Chromium и сохранение cookies
-  get_cookies_requests.py авторизация через requests (эксперимент)
+  get_cookies.py       авторизация и сохранение cookies
   parse_ozon.py        парсинг SKU и выбор хранилища
 src/ozon_parser/
   browser_client.py    загрузка карточек через Chrome
