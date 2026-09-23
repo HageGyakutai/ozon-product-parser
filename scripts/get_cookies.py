@@ -139,7 +139,9 @@ def main() -> None:
         try:
             authenticate(context, phone, gmail)
             cookies = [
-                cookie for cookie in context.cookies() if ozon_cookie_domain(cookie.get("domain"))
+                dict(cookie)
+                for cookie in context.cookies()
+                if ozon_cookie_domain(cookie.get("domain"))
             ]
             if not cookies:
                 raise RuntimeError("No Ozon cookies found after authentication")
