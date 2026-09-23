@@ -86,7 +86,7 @@ def first(node, *names):
 
 
 def characteristics(node):
-    result = {}
+    result: dict[str, str | None] = {}
     # Manufacturer article has priority over set contents or packaging.
     art_priority = ("артикул производителя", "art set", "комплектация", "состав набора")
     articles = {}

@@ -1,14 +1,26 @@
+# Local configuration and secrets
 .env
-.venv/
-__pycache__/
-.pytest_cache/
-*.pyc
-cookies.json
-browser-cookies*.json
+.env.*
+!.env.example
 *credentials*.json
 *token*.json
-*.lnk
-output/
-*.html
+cookies*.json
+browser-cookies*.json
 
+# Python and tooling
+.venv/
+__pycache__/
+*.py[cod]
 *.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Runtime output
+output/
+logs/
+*.html

@@ -1,3 +1,5 @@
+"""Start or reuse the local Chrome instance shared by both CLI scripts."""
+
 import logging
 import os
 import shutil
@@ -60,6 +62,7 @@ def _startup_delay() -> float:
 
 
 def ensure_cdp_browser(endpoint: str, *, start_url: str) -> bool:
+    """Ensure local Chrome CDP is ready; return whether Chrome was started."""
     endpoint = endpoint.strip()
     if cdp_is_ready(endpoint):
         LOGGER.info("Reusing Chrome CDP session at %s", endpoint)

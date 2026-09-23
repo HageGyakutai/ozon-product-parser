@@ -1,6 +1,7 @@
 """Read verification messages received after the current login attempt."""
 
 import base64
+import binascii
 import logging
 import os
 import re
@@ -40,7 +41,7 @@ def message_text(payload: dict) -> list[str]:
             if kind == "text/html":
                 decoded = BeautifulSoup(decoded, "html.parser").get_text(" ")
             chunks.append(decoded)
-        except (ValueError, base64.binascii.Error):
+        except (ValueError, binascii.Error):
             pass
     for part in payload.get("parts", []):
         if isinstance(part, dict):

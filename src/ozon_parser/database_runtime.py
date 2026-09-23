@@ -1,9 +1,12 @@
+"""Prepare PostgreSQL and Alembic before database output."""
+
 import logging
 import subprocess
 from pathlib import Path
 
 from alembic.config import Config
 from sqlalchemy import text
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
 from alembic import command
@@ -12,7 +15,7 @@ LOGGER = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _database_is_available(engine) -> bool:
+def _database_is_available(engine: Engine) -> bool:
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
@@ -46,7 +49,7 @@ def _apply_migrations() -> None:
     command.upgrade(config, "head")
 
 
-def prepare_database(engine, *, auto_start: bool = True) -> None:
+def prepare_database(engine: Engine, *, auto_start: bool = True) -> None:
     if not _database_is_available(engine):
         if not auto_start:
             raise RuntimeError(

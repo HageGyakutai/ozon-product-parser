@@ -1,9 +1,12 @@
+"""PostgreSQL model and UPSERT persistence for parsed products."""
+
 import os
 from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import Boolean, DateTime, Integer, Numeric, String, Text, create_engine, func
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from .models import Product
@@ -36,7 +39,8 @@ class ProductRow(Base):
     )
 
 
-def database_engine():
+def database_engine() -> Engine:
+    """Create a validated PostgreSQL engine from DATABASE_URL."""
     url = os.getenv("DATABASE_URL")
     if not url or not url.startswith("postgresql+psycopg://"):
         raise ValueError("Set DATABASE_URL to a postgresql+psycopg:// URL")
@@ -44,6 +48,7 @@ def database_engine():
 
 
 def save_product(session: Session, product: Product) -> None:
+    """Insert a product or update the existing row with the same SKU."""
     values = vars(product)
     statement = insert(ProductRow).values(**values)
     statement = statement.on_conflict_do_update(

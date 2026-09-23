@@ -57,6 +57,8 @@ def _playwright_cookies(cookies: list[dict]) -> list[dict]:
 
 
 class BrowserProductClient:
+    """Load authenticated product pages through Playwright and shared Chrome."""
+
     def __init__(
         self,
         cookies_file: str,
