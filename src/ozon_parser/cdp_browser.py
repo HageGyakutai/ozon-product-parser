@@ -85,7 +85,15 @@ def ensure_cdp_browser(endpoint: str, *, start_url: str) -> bool:
         f"--user-data-dir={profile}",
     ]
     if _headless_enabled():
-        command.extend(["--headless=new", "--no-sandbox", "--disable-dev-shm-usage"])
+        command.extend(
+            [
+                "--headless=new",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-quic",
+                "--disable-features=UseDnsHttpsSvcbAlpn",
+            ]
+        )
     command.append(start_url)
     process = subprocess.Popen(
         command,
