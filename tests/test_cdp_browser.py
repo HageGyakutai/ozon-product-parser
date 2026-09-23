@@ -95,6 +95,26 @@ def test_configured_chrome_must_exist(monkeypatch, tmp_path):
         cdp_browser._chrome_executable()
 
 
+def test_playwright_installation_waits_until_browser_appears(monkeypatch, tmp_path):
+    executable = tmp_path / "chromium"
+    executable.touch()
+    results = iter([None, None, str(executable)])
+    sleeps = []
+    monkeypatch.setattr(cdp_browser.subprocess, "run", lambda command, **kwargs: None)
+    monkeypatch.setattr(
+        cdp_browser,
+        "_playwright_chromium_executable",
+        lambda: next(results),
+    )
+    monkeypatch.setattr(cdp_browser.time, "sleep", sleeps.append)
+
+    assert cdp_browser._install_playwright_chromium() == str(executable)
+    assert sleeps == [
+        cdp_browser.PLAYWRIGHT_DISCOVERY_INTERVAL,
+        cdp_browser.PLAYWRIGHT_DISCOVERY_INTERVAL,
+    ]
+
+
 def test_chrome_executable_uses_installed_playwright_browser(monkeypatch, tmp_path):
     executable = tmp_path / "playwright-chromium"
     executable.touch()

@@ -15,6 +15,8 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_CDP_ENDPOINT = "http://127.0.0.1:9222"
 DEFAULT_PROFILE = Path.home() / ".cache" / "ozon-parser-chrome"
 DEFAULT_STARTUP_DELAY = 2.0
+PLAYWRIGHT_DISCOVERY_ATTEMPTS = 40
+PLAYWRIGHT_DISCOVERY_INTERVAL = 0.25
 
 
 def cdp_is_ready(endpoint: str) -> bool:
@@ -58,11 +60,17 @@ def _install_playwright_chromium() -> str:
             "'uv run playwright install chromium' and retry."
         ) from exc
 
-    executable = _playwright_chromium_executable()
-    if executable is None:
-        raise RuntimeError("Playwright installed Chromium but its executable was not found")
-    LOGGER.info("Playwright Chromium is ready at %s", executable)
-    return executable
+    for attempt in range(PLAYWRIGHT_DISCOVERY_ATTEMPTS):
+        executable = _playwright_chromium_executable()
+        if executable is not None:
+            LOGGER.info("Playwright Chromium is ready at %s", executable)
+            return executable
+        if attempt < PLAYWRIGHT_DISCOVERY_ATTEMPTS - 1:
+            time.sleep(PLAYWRIGHT_DISCOVERY_INTERVAL)
+
+    raise RuntimeError(
+        "Playwright installed Chromium but its executable did not appear within 10 seconds"
+    )
 
 
 def _chrome_executable() -> str:
