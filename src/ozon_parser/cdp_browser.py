@@ -56,6 +56,15 @@ def _startup_delay() -> float:
     return delay
 
 
+def _headless_enabled() -> bool:
+    raw_value = os.getenv("OZON_CHROME_HEADLESS", "false").strip().casefold()
+    if raw_value in {"1", "true", "yes"}:
+        return True
+    if raw_value in {"0", "false", "no"}:
+        return False
+    raise RuntimeError("OZON_CHROME_HEADLESS must be true or false")
+
+
 def ensure_cdp_browser(endpoint: str, *, start_url: str) -> bool:
     """Ensure local Chrome CDP is ready; return whether Chrome was started."""
     endpoint = endpoint.strip()
@@ -69,14 +78,17 @@ def ensure_cdp_browser(endpoint: str, *, start_url: str) -> bool:
     profile.mkdir(parents=True, exist_ok=True)
     executable = _chrome_executable()
     LOGGER.info("Chrome CDP is unavailable; starting %s", executable)
+    command = [
+        executable,
+        f"--remote-debugging-port={port}",
+        "--remote-debugging-address=127.0.0.1",
+        f"--user-data-dir={profile}",
+    ]
+    if _headless_enabled():
+        command.extend(["--headless=new", "--no-sandbox", "--disable-dev-shm-usage"])
+    command.append(start_url)
     process = subprocess.Popen(
-        [
-            executable,
-            f"--remote-debugging-port={port}",
-            "--remote-debugging-address=127.0.0.1",
-            f"--user-data-dir={profile}",
-            start_url,
-        ],
+        command,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
