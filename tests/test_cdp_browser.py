@@ -1,0 +1,67 @@
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from ozon_parser import cdp_browser
+
+
+def test_ensure_cdp_browser_reuses_ready_session(monkeypatch):
+    monkeypatch.setattr(cdp_browser, "cdp_is_ready", lambda endpoint: True)
+    monkeypatch.setattr(
+        cdp_browser.subprocess,
+        "Popen",
+        lambda *args, **kwargs: pytest.fail("Chrome must not be started"),
+    )
+
+    assert (
+        cdp_browser.ensure_cdp_browser(
+            "http://127.0.0.1:9222", start_url="https://data.ozon.ru/"
+        )
+        is False
+    )
+
+
+def test_ensure_cdp_browser_starts_chrome_and_waits(monkeypatch, tmp_path):
+    states = iter([False, False, True])
+    captured = {}
+    monkeypatch.setattr(cdp_browser, "cdp_is_ready", lambda endpoint: next(states))
+    monkeypatch.setattr(cdp_browser, "_chrome_executable", lambda: "/usr/bin/chrome")
+    monkeypatch.setenv("OZON_CHROME_PROFILE", str(tmp_path / "profile"))
+    monkeypatch.setattr(cdp_browser.time, "sleep", lambda seconds: None)
+
+    def popen(command, **kwargs):
+        captured["command"] = command
+        captured.update(kwargs)
+        return SimpleNamespace(poll=lambda: None)
+
+    monkeypatch.setattr(cdp_browser.subprocess, "Popen", popen)
+
+    assert cdp_browser.ensure_cdp_browser(
+        "http://127.0.0.1:9222", start_url="https://data.ozon.ru/"
+    )
+    assert "--remote-debugging-port=9222" in captured["command"]
+    assert "https://data.ozon.ru/" in captured["command"]
+    assert (tmp_path / "profile").is_dir()
+    assert captured["start_new_session"] is True
+
+
+def test_automatic_start_rejects_remote_endpoint(monkeypatch):
+    monkeypatch.setattr(cdp_browser, "cdp_is_ready", lambda endpoint: False)
+
+    with pytest.raises(RuntimeError, match="only a local"):
+        cdp_browser.ensure_cdp_browser(
+            "https://remote.example:9222", start_url="https://data.ozon.ru/"
+        )
+
+
+def test_configured_chrome_must_exist(monkeypatch, tmp_path):
+    missing = tmp_path / "missing-chrome"
+    monkeypatch.setenv("OZON_CHROME_EXECUTABLE", str(missing))
+
+    with pytest.raises(RuntimeError, match="does not exist"):
+        cdp_browser._chrome_executable()
+
+
+def test_default_profile_is_a_path():
+    assert isinstance(cdp_browser.DEFAULT_PROFILE, Path)

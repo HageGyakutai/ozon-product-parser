@@ -30,7 +30,9 @@ cp .env.example .env
 | `OZON_COOKIES_FILE` | Локальный файл сессии, обычно `cookies.json`; создаётся после входа. |
 | `OZON_BROWSER` | Движок Playwright: `chromium` по умолчанию, также поддерживаются `firefox` и `webkit`. |
 | `OZON_BROWSER_CHANNEL` | Для системного Chrome укажите `chrome`; оставьте пустым для браузера Playwright. |
-| `OZON_CDP_ENDPOINT` | Необязательный локальный endpoint уже открытого Chrome, например `http://127.0.0.1:9222`. |
+| `OZON_CDP_ENDPOINT` | Локальный endpoint общего Chrome, по умолчанию `http://127.0.0.1:9222`. |
+| `OZON_CHROME_EXECUTABLE` | Необязательный полный путь к Chrome, если он не найден автоматически. |
+| `OZON_CHROME_PROFILE` | Необязательный каталог отдельного профиля; по умолчанию `~/.cache/ozon-parser-chrome`. |
 | `DATABASE_URL` | При локальном запуске адрес PostgreSQL на `localhost:5432` из `.env.example`. Контейнеры Compose используют свой `DATABASE_URL` из `compose.yaml`. |
 
 Порядок первого запуска: настройте Gmail → проверьте `check_gmail.py` → подготовьте PostgreSQL → получите cookies через `get_cookies.py` → выполните `parse_ozon.py` с нужными SKU. Каждый шаг описан ниже. Файлы с токенами и cookies не коммитьте.
@@ -112,16 +114,14 @@ PostgreSQL 16, SQLAlchemy 2, psycopg 3; миграция создаёт `product
 uv run python scripts/get_cookies.py
 ```
 
-Обычный режим запускает отдельный браузер Playwright. Для системного Google Chrome задайте `OZON_BROWSER=chromium` и `OZON_BROWSER_CHANNEL=chrome`. Если Ozon блокирует новый автоматизированный сеанс, используйте отдельный пользовательский профиль Chrome через CDP:
+Для Chromium рекомендуется общий Chrome CDP. Оба скрипта — `get_cookies.py`
+и `parse_ozon.py --transport browser` — используют один механизм. Они сначала
+проверяют `OZON_CDP_ENDPOINT`. Если Chrome не запущен, программа сама находит
+Google Chrome/Chromium, запускает его с отдельным профилем, ждёт готовности
+порта и затем продолжает работу. Вручную запускать команду Chrome больше не
+нужно.
 
-```bash
-google-chrome-stable \
-  --remote-debugging-port=9222 \
-  --user-data-dir="$HOME/.cache/ozon-parser-chrome" \
-  https://data.ozon.ru/
-```
-
-Пройдите возможную проверку Ozon в открывшемся окне, оставьте Chrome запущенным и добавьте в `.env`:
+Рекомендуемые настройки:
 
 ```dotenv
 OZON_BROWSER=chromium
@@ -129,7 +129,17 @@ OZON_BROWSER_CHANNEL=chrome
 OZON_CDP_ENDPOINT=http://127.0.0.1:9222
 ```
 
-Проверьте endpoint командой `curl http://127.0.0.1:9222/json/version`, затем запустите `uv run python scripts/get_cookies.py` во втором терминале. CDP предоставляет полный контроль над браузером: используйте только loopback-адрес и не публикуйте порт. Для Firefox установите браузер командой `uv run playwright install firefox`, задайте `OZON_BROWSER=firefox` и оставьте channel/CDP пустыми.
+Если Chrome установлен нестандартно, укажите полный путь:
+
+```dotenv
+OZON_CHROME_EXECUTABLE=/полный/путь/к/google-chrome
+```
+
+Профиль по умолчанию хранится в `~/.cache/ozon-parser-chrome`. CDP слушает
+только loopback-адрес; не публикуйте порт `9222` в сеть. Если Ozon покажет
+CAPTCHA или проверку браузера, её по-прежнему необходимо пройти вручную в
+автоматически открытом окне. После этого тот же профиль повторно используется
+для входа и парсинга.
 
 Скрипт автоматизирует основной сценарий: открывает `data.ozon.ru`, вводит `OZON_PHONE`, запрашивает новый код, считывает его через Gmail API, вводит в Ozon ID и сохраняет cookies после возврата. Полный сценарий подтверждён на реальном аккаунте через Chrome CDP. Ручное действие по-прежнему требуется для первой OAuth-авторизации Gmail и для CAPTCHA/проверки браузера, которую может потребовать Ozon. Код и номер не записываются в логи. Вход только через `requests` не реализован, поскольку Ozon ID/SSO и антибот требуют браузерный контекст.
 
