@@ -37,9 +37,12 @@ def login_page(context):
 
 def authenticate(context, phone: str, gmail) -> None:
     page = login_page(context)
-    # Ozon can keep loading background resources for a long time. Waiting for
-    # the navigation commit is enough; the locator below verifies UI readiness.
-    page.goto("https://data.ozon.ru/", wait_until="commit", timeout=30000)
+    if not page.url.startswith("https://data.ozon.ru/"):
+        # Ozon can keep loading background resources for a long time. Waiting for
+        # the navigation commit is enough; the locator below verifies UI readiness.
+        page.goto("https://data.ozon.ru/", wait_until="commit", timeout=30000)
+    else:
+        LOGGER.info("Reusing data.ozon.ru page already open in Chrome")
     ensure_not_blocked(context)
     analytics_button = page.get_by_role(
         "button", name=re.compile("Перейти к аналитике", re.I)
