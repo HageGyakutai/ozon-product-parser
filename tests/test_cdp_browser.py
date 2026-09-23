@@ -63,5 +63,13 @@ def test_configured_chrome_must_exist(monkeypatch, tmp_path):
         cdp_browser._chrome_executable()
 
 
+@pytest.mark.parametrize("value", ["not-a-number", "-1", "31"])
+def test_invalid_startup_delay_is_rejected(monkeypatch, value):
+    monkeypatch.setenv("OZON_CHROME_STARTUP_DELAY", value)
+
+    with pytest.raises(RuntimeError, match="OZON_CHROME_STARTUP_DELAY"):
+        cdp_browser._startup_delay()
+
+
 def test_default_profile_is_a_path():
     assert isinstance(cdp_browser.DEFAULT_PROFILE, Path)
