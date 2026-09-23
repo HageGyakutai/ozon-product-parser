@@ -159,9 +159,10 @@ def dom_characteristics(soup: BeautifulSoup) -> dict[str, str | None]:
             sibling = current.find_next_sibling()
             if sibling is not None:
                 candidates.append(sibling)
-            current = current.parent
-            if current is None:
+            next_parent = current.parent
+            if next_parent is None:
                 break
+            current = next_parent
 
         candidate_value = next(
             (
