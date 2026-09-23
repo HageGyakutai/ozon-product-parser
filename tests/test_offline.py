@@ -44,6 +44,7 @@ def test_offline_parses_same_extractor_without_network_or_cookie_file(tmp_path, 
             pass
 
     monkeypatch.setattr(parse_ozon, "database_engine", FakeEngine)
+    monkeypatch.setattr(parse_ozon, "prepare_database", lambda *args, **kwargs: None)
     monkeypatch.setattr(parse_ozon, "Session", FakeDb)
     monkeypatch.setattr(parse_ozon, "save_product", lambda db, product: saved.append(product))
     monkeypatch.setattr(parse_ozon, "product_session", lambda *args: pytest.fail("cookies opened"))
