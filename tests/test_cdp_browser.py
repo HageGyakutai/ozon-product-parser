@@ -66,6 +66,8 @@ def test_headless_chrome_flags(monkeypatch, tmp_path):
     assert "--headless=new" in command
     assert "--no-sandbox" in command
     assert "--disable-dev-shm-usage" in command
+    assert "--disable-quic" in command
+    assert "--disable-features=UseDnsHttpsSvcbAlpn" in command
 
 
 @pytest.mark.parametrize("value", ["maybe", "enabled"])
