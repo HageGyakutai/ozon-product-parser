@@ -1,6 +1,5 @@
 """Tests for the command executed by the Airflow DAG."""
 
-import subprocess
 import sys
 
 import pytest
