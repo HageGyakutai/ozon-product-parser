@@ -13,7 +13,8 @@
 - сохранение результата в CSV или PostgreSQL;
 - автоматический запуск Chrome CDP для обхода блокировки нового браузера;
 - автоматический запуск локального PostgreSQL и применение миграций;
-- повторная запись товара через PostgreSQL UPSERT по SKU.
+- повторная запись товара через PostgreSQL UPSERT по SKU;
+- ежедневный запуск парсера через Airflow.
 
 Парсер извлекает 12 полей:
 
@@ -24,7 +25,7 @@
 ## Стек
 
 Python 3.12+, Playwright, Requests, BeautifulSoup, Gmail API, SQLAlchemy,
-PostgreSQL 16, Alembic, Docker Compose, pytest, Ruff и mypy.
+PostgreSQL 16, Alembic, Docker Compose, Airflow, pytest, Ruff и mypy.
 
 ## Требования
 
@@ -67,7 +68,7 @@ Chrome должен быть установлен в системе. Скрип�
 ```dotenv
 DATABASE_URL=postgresql+psycopg://ozon:local_only_change_me@localhost:5432/ozon
 
-OZON_PHONE=79990000000
+OZON_PHONE=9230000000
 OZON_COOKIES_FILE=cookies.json
 OZON_BROWSER=chromium
 OZON_BROWSER_CHANNEL=chrome
@@ -75,6 +76,7 @@ OZON_CDP_ENDPOINT=http://127.0.0.1:9222
 OZON_CHROME_EXECUTABLE=
 OZON_CHROME_PROFILE=
 OZON_CHROME_STARTUP_DELAY=3
+OZON_AIRFLOW_SKUS=2359066702,2829800382
 
 GMAIL_CREDENTIALS_FILE=credentials.json
 GMAIL_TOKEN_FILE=token.json
@@ -191,6 +193,45 @@ uv run python scripts/parse_ozon.py \
 Ozon может вернуть HTTP 403 автоматическому HTTP-клиенту даже с действительными
 cookies. В таком случае используйте проверенный `--transport browser`.
 
+## 4. Ежедневный запуск через Airflow
+
+Airflow установлен в отдельной группе зависимостей и не нужен для обычного
+ручного запуска парсера:
+
+```bash
+uv sync --locked --group airflow
+```
+
+Перед первым запуском Airflow один раз получите cookies:
+
+```bash
+uv run python scripts/get_cookies.py
+```
+
+Список товаров для ежедневного запуска задаётся в `.env` через запятую или
+пробел:
+
+```dotenv
+OZON_AIRFLOW_SKUS=2359066702,2829800382
+```
+
+Запустите локальный Airflow:
+
+```bash
+export AIRFLOW_HOME="$PWD/.airflow"
+export AIRFLOW__CORE__DAGS_FOLDER="$PWD/dags"
+uv run --group airflow airflow standalone
+```
+
+Откройте адрес, указанный Airflow в терминале, и включите DAG
+`ozon_products_daily`. Он запускается ежедневно в 06:00 UTC, использует
+browser-транспорт и сохраняет результат в PostgreSQL. Первый запуск можно
+выполнить вручную из интерфейса Airflow.
+
+DAG не запрашивает код авторизации ежедневно. Он использует сохранённый
+`cookies.json`. Если сессия Ozon истекла, задача завершится ошибкой: повторно
+запустите `get_cookies.py`, после чего перезапустите задачу Airflow.
+
 ## Проверки качества
 
 ```bash
@@ -217,6 +258,8 @@ TEST_DATABASE_URL=postgresql+psycopg://ozon:local_only_change_me@localhost:5432/
 ## Структура
 
 ```text
+dags/
+  ozon_products_daily.py ежедневный DAG Airflow
 scripts/
   get_cookies.py       авторизация и сохранение cookies
   parse_ozon.py        парсинг SKU и выбор хранилища
@@ -228,6 +271,7 @@ src/ozon_parser/
   extractor.py         извлечение 12 полей
   storage.py           SQLAlchemy и UPSERT
   database_runtime.py  healthcheck PostgreSQL и Alembic
+  airflow_task.py       запуск существующего CLI из Airflow
 alembic/               миграции PostgreSQL
 tests/                 автоматические тесты
 ```
