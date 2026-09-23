@@ -19,7 +19,17 @@ def main():
     load_dotenv()
     parser = argparse.ArgumentParser()
     parser.add_argument("skus", nargs="+", help="Numeric Ozon product IDs")
-    parser.add_argument("--csv", type=Path, help="Additional CSV export")
+    parser.add_argument(
+        "--output",
+        choices=("database", "csv"),
+        default="database",
+        help="Where to save parsed products (default: database)",
+    )
+    parser.add_argument(
+        "--csv",
+        type=Path,
+        help="CSV path used with --output csv (default: output/products.csv)",
+    )
     parser.add_argument(
         "--html-file", type=Path, help="Parse one saved HTML page without Ozon access"
     )
@@ -43,6 +53,9 @@ def main():
         parser.error("--html-file requires exactly one SKU")
     if args.html_file and args.debug_html_dir:
         parser.error("--debug-html-dir is only available in live mode")
+    if args.output == "database" and args.csv is not None:
+        parser.error("--csv is available only with --output csv")
+    csv_path = args.csv or Path("output/products.csv")
     client = None
     if not args.html_file:
         cookies_file = os.getenv("OZON_COOKIES_FILE", "cookies.json")
@@ -66,15 +79,18 @@ def main():
         except OSError as exc:
             logging.error("Cannot read saved HTML: %s", exc)
             raise SystemExit(2) from None
-    try:
-        engine = database_engine()
-    except ValueError as exc:
-        if client is not None:
-            client.close()
-        logging.error("Cannot start parser: %s", exc)
-        raise SystemExit(2) from None
+    engine = None
+    if args.output == "database":
+        try:
+            engine = database_engine()
+        except ValueError as exc:
+            if client is not None:
+                client.close()
+            logging.error("Cannot start parser: %s", exc)
+            raise SystemExit(2) from None
     products = []
-    with client if client is not None else nullcontext(), Session(engine) as db:
+    database_context = Session(engine) if engine is not None else nullcontext()
+    with client if client is not None else nullcontext(), database_context as db:
         for sku in args.skus:
             try:
                 logging.info("Parsing SKU=%s", sku)
@@ -87,23 +103,27 @@ def main():
                 if args.debug_html_dir:
                     save_debug_html(args.debug_html_dir / f"{sku}.html", html)
                 product = extract_product(html, sku)
-                save_product(db, product)
+                if args.output == "database":
+                    save_product(db, product)
                 products.append(product)
-                logging.info("Saved SKU=%s", sku)
+                logging.info("Parsed SKU=%s", sku)
             except (ValueError, OSError) as exc:
                 logging.error("Failed SKU=%s: %s", sku, exc)
             except Exception:
                 logging.exception("Unexpected failure for SKU=%s", sku)
-    if args.csv and products:
-        args.csv.parent.mkdir(parents=True, exist_ok=True)
-        with args.csv.open("w", encoding="utf-8-sig", newline="") as handle:
+    if args.output == "csv" and products:
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=list(vars(products[0])))
             writer.writeheader()
             writer.writerows(vars(item) for item in products)
-        logging.info("CSV exported: %s rows", len(products))
-    engine.dispose()
+        logging.info("CSV exported: %s rows to %s", len(products), csv_path)
+    if engine is not None:
+        engine.dispose()
     logging.info(
-        "Parsing complete: %s saved, %s failed", len(products), len(args.skus) - len(products)
+        "Parsing complete: %s succeeded, %s failed",
+        len(products),
+        len(args.skus) - len(products),
     )
     if len(products) != len(args.skus):
         raise SystemExit(1)
