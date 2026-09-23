@@ -105,11 +105,15 @@ Gmail token, cookies и результаты парсинга.
 uv run python scripts/get_cookies.py
 ```
 
-Экспериментальный вариант выполняет весь вход через `requests.Session`:
+Экспериментальный вариант выполняет весь вход через requests-совместимую сессию
+`curl_cffi`, которая имитирует TLS/HTTP2-отпечаток Chrome:
 
 ```bash
 uv run python scripts/get_cookies_requests.py
 ```
+
+`curl_cffi` повышает шанс пройти первичную антибот-проверку, но не выполняет
+JavaScript и не гарантирует успешный вход на текущей версии Ozon ID.
 
 Оба скрипта используют номер из `OZON_PHONE`, получают новый код через Gmail
 API и сохраняют совместимый `cookies.json`. HTTP-вариант работает только если
