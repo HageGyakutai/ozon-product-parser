@@ -33,6 +33,7 @@ cp .env.example .env
 | `OZON_CDP_ENDPOINT` | Локальный endpoint общего Chrome, по умолчанию `http://127.0.0.1:9222`. |
 | `OZON_CHROME_EXECUTABLE` | Необязательный полный путь к Chrome, если он не найден автоматически. |
 | `OZON_CHROME_PROFILE` | Необязательный каталог отдельного профиля; по умолчанию `~/.cache/ozon-parser-chrome`. |
+| `OZON_CHROME_STARTUP_DELAY` | Пауза после нового запуска Chrome; по умолчанию 2 секунды. |
 | `DATABASE_URL` | При локальном запуске адрес PostgreSQL на `localhost:5432` из `.env.example`. Контейнеры Compose используют свой `DATABASE_URL` из `compose.yaml`. |
 
 Порядок первого запуска: настройте Gmail → проверьте `check_gmail.py` → подготовьте PostgreSQL → получите cookies через `get_cookies.py` → выполните `parse_ozon.py` с нужными SKU. Каждый шаг описан ниже. Файлы с токенами и cookies не коммитьте.
@@ -135,7 +136,7 @@ OZON_CDP_ENDPOINT=http://127.0.0.1:9222
 OZON_CHROME_EXECUTABLE=/полный/путь/к/google-chrome
 ```
 
-Профиль по умолчанию хранится в `~/.cache/ozon-parser-chrome`. CDP слушает
+Профиль по умолчанию хранится в `~/.cache/ozon-parser-chrome`. После нового запуска скрипт ждёт готовности CDP и ещё 2 секунды готовности интерфейса (значение настраивается через `OZON_CHROME_STARTUP_DELAY`). CDP слушает
 только loopback-адрес; не публикуйте порт `9222` в сеть. Если Ozon покажет
 CAPTCHA или проверку браузера, её по-прежнему необходимо пройти вручную в
 автоматически открытом окне. После этого тот же профиль повторно используется
