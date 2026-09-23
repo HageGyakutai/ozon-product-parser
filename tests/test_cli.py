@@ -170,6 +170,7 @@ def setup_parse(monkeypatch):
     monkeypatch.setattr(parse, "save_product", lambda db, product: saved.append(product))
     monkeypatch.setattr(parse, "Session", lambda engine: ContextManager())
     monkeypatch.setattr(parse, "database_engine", lambda: SimpleNamespace(dispose=lambda: None))
+    monkeypatch.setattr(parse, "prepare_database", lambda *args, **kwargs: None)
     return saved
 
 
@@ -275,6 +276,7 @@ def test_parser_browser_transport_uses_browser_client(monkeypatch):
     monkeypatch.setattr(parse, "save_product", lambda db, product: saved.append(product))
     monkeypatch.setattr(parse, "Session", lambda engine: ContextManager())
     monkeypatch.setattr(parse, "database_engine", lambda: SimpleNamespace(dispose=lambda: None))
+    monkeypatch.setattr(parse, "prepare_database", lambda *args, **kwargs: None)
     monkeypatch.setattr(sys, "argv", ["parse_ozon.py", "123", "--transport", "browser"])
 
     assert parse.main() is None
