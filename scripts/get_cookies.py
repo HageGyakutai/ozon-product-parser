@@ -51,7 +51,11 @@ def authenticate(context, phone: str, gmail) -> None:
     analytics_button.click()
     page = current_page(context)
     ensure_not_blocked(context)
-    phone_input = page.get_by_placeholder(re.compile(r"9999|телефон", re.I))
+    phone_input = page.locator(
+        'input[type="tel"], input[autocomplete="tel"], input[name*="phone" i]'
+    ).first
+    if phone_input.count() == 0:
+        phone_input = page.get_by_placeholder(re.compile(r"9999|телефон", re.I)).first
     phone_input.wait_for(state="visible", timeout=15000)
     phone_input.fill(phone)
     started = datetime.now(UTC)
