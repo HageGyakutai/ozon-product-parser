@@ -22,5 +22,43 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+  airflow:
+    profiles: ["airflow"]
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    env_file:
+      - .env
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /app/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: admin:admin
+      DATABASE_URL: postgresql+psycopg://ozon:local_only_change_me@postgres:5432/ozon
+      OZON_COOKIES_FILE: /app/cookies.json
+      OZON_BROWSER: chromium
+      OZON_BROWSER_CHANNEL: ""
+      OZON_CDP_ENDPOINT: http://127.0.0.1:9222
+      OZON_CHROME_EXECUTABLE: /usr/bin/chromium
+      OZON_CHROME_PROFILE: /opt/chrome/profile
+      OZON_CHROME_HEADLESS: "true"
+      OZON_CHROME_STARTUP_DELAY: "3"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - airflow_data:/opt/airflow
+      - airflow_chrome:/opt/chrome
+      - type: bind
+        source: ./cookies.json
+        target: /app/cookies.json
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
 volumes:
   postgres_data:
+  airflow_data:
+  airflow_chrome:
