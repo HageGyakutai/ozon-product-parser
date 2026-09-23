@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
-import requests
 from bs4 import BeautifulSoup
+from curl_cffi import requests
 from dotenv import load_dotenv
 
 from ozon_parser.gmail import gmail_service, wait_for_code
@@ -22,11 +22,6 @@ USER_AGENT = (
     "Chrome/131.0.0.0 Safari/537.36"
 )
 NAVIGATION_HEADERS = {
-    "User-Agent": USER_AGENT,
-    "Accept": (
-        "text/html,application/xhtml+xml,application/xml;q=0.9,"
-        "image/avif,image/webp,image/apng,*/*;q=0.8"
-    ),
     "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
     "Cache-Control": "no-cache",
     "Pragma": "no-cache",
@@ -88,15 +83,13 @@ def submit_login_form(
 
 def requests_session() -> requests.Session:
     """Create the isolated HTTP session used by the experimental login."""
-    session = requests.Session()
-    session.headers.update(NAVIGATION_HEADERS)
-    return session
+    return requests.Session(impersonate="chrome", headers=NAVIGATION_HEADERS)
 
 
 def portable_cookies(session: requests.Session) -> list[dict[str, object]]:
     """Convert requests cookies into the format consumed by parse_ozon.py."""
     result: list[dict[str, object]] = []
-    for cookie in session.cookies:
+    for cookie in session.cookies.jar:
         if not ozon_cookie_domain(cookie.domain):
             continue
         result.append(

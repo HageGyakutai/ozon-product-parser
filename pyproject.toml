@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 name = "ozon-product-parser"
 version = "0.1.0"
 requires-python = ">=3.12,<3.13"
-dependencies = ["requests>=2.32,<3", "beautifulsoup4>=4.12,<5", "SQLAlchemy>=2.0,<3", "alembic>=1.13,<2", "psycopg[binary]>=3.2,<4", "python-dotenv>=1,<2", "google-api-python-client>=2,<3", "google-auth-oauthlib>=1,<2", "playwright>=1.50,<2"]
+dependencies = ["requests>=2.32,<3", "beautifulsoup4>=4.12,<5", "SQLAlchemy>=2.0,<3", "alembic>=1.13,<2", "psycopg[binary]>=3.2,<4", "python-dotenv>=1,<2", "google-api-python-client>=2,<3", "google-auth-oauthlib>=1,<2", "playwright>=1.50,<2", "curl-cffi>=0.11,<1"]
 [dependency-groups]
 airflow = [
     "apache-airflow>=3.1,<4",

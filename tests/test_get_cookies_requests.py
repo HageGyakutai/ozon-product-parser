@@ -31,6 +31,19 @@ CODE_HTML = """
 """
 
 
+def test_requests_session_uses_chrome_impersonation(monkeypatch):
+    constructor = Mock()
+    expected = Mock()
+    constructor.return_value = expected
+    monkeypatch.setattr(login.requests, "Session", constructor)
+
+    assert login.requests_session() is expected
+    constructor.assert_called_once_with(
+        impersonate="chrome",
+        headers=login.NAVIGATION_HEADERS,
+    )
+
+
 def test_find_login_form_recognizes_phone_input():
     form, field = login.find_login_form(PHONE_HTML, login.PHONE_MARKERS)
 
