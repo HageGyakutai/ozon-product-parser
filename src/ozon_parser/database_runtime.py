@@ -50,8 +50,7 @@ def prepare_database(engine, *, auto_start: bool = True) -> None:
     if not _database_is_available(engine):
         if not auto_start:
             raise RuntimeError(
-                "PostgreSQL is unavailable. Start it before running with "
-                "--no-start-database."
+                "PostgreSQL is unavailable. Start it before running with --no-start-database."
             )
         _start_postgres()
         if not _database_is_available(engine):
