@@ -45,7 +45,6 @@ def _chrome_executable() -> str:
     raise RuntimeError("Google Chrome/Chromium was not found. Set OZON_CHROME_EXECUTABLE in .env.")
 
 
-
 def _startup_delay() -> float:
     raw_value = os.getenv("OZON_CHROME_STARTUP_DELAY", str(DEFAULT_STARTUP_DELAY)).strip()
     try:
