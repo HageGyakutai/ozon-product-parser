@@ -60,9 +60,7 @@ def test_headless_chrome_flags(monkeypatch, tmp_path):
         ),
     )
 
-    cdp_browser.ensure_cdp_browser(
-        "http://127.0.0.1:9222", start_url="https://www.ozon.ru/"
-    )
+    cdp_browser.ensure_cdp_browser("http://127.0.0.1:9222", start_url="https://www.ozon.ru/")
 
     command = captured["process"].command
     assert "--headless=new" in command
