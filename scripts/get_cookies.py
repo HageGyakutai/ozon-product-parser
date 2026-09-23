@@ -72,8 +72,10 @@ def authenticate(context, phone: str, gmail) -> None:
     LOGGER.info("New Gmail verification email received")
     page = current_page(context)
     ensure_not_blocked(context)
-    code_input = page.get_by_role("textbox", name=re.compile("код|code", re.I))
-    code_input.wait_for(state="visible", timeout=15000)
+    # Ozon renders the confirmation control without an accessible name.
+    # At this step the verification code is the only visible input.
+    code_input = page.locator("input:visible").first
+    code_input.wait_for(state="visible", timeout=30000)
     code_input.fill(code)
     # Ozon may submit automatically after the last digit.
     try:
