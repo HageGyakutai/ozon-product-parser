@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from ozon_parser.browser_client import BrowserProductClient
 from ozon_parser.client import fetch_product, product_session
+from ozon_parser.database_runtime import prepare_database
 from ozon_parser.debug_html import save_debug_html
 from ozon_parser.extractor import extract_product
 from ozon_parser.storage import database_engine, save_product
@@ -29,6 +30,11 @@ def main():
         "--csv",
         type=Path,
         help="CSV path used with --output csv (default: output/products.csv)",
+    )
+    parser.add_argument(
+        "--no-start-database",
+        action="store_true",
+        help="Fail instead of starting PostgreSQL with Docker Compose",
     )
     parser.add_argument(
         "--html-file", type=Path, help="Parse one saved HTML page without Ozon access"
@@ -55,6 +61,8 @@ def main():
         parser.error("--debug-html-dir is only available in live mode")
     if args.output == "database" and args.csv is not None:
         parser.error("--csv is available only with --output csv")
+    if args.output == "csv" and args.no_start_database:
+        parser.error("--no-start-database is available only with --output database")
     csv_path = args.csv or Path("output/products.csv")
     client = None
     if not args.html_file:
@@ -83,7 +91,8 @@ def main():
     if args.output == "database":
         try:
             engine = database_engine()
-        except ValueError as exc:
+            prepare_database(engine, auto_start=not args.no_start_database)
+        except (ValueError, RuntimeError) as exc:
             if client is not None:
                 client.close()
             logging.error("Cannot start parser: %s", exc)
