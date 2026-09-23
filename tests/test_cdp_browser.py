@@ -39,6 +39,7 @@ def test_ensure_cdp_browser_starts_chrome_and_waits(monkeypatch, tmp_path):
         "http://127.0.0.1:9222", start_url="https://data.ozon.ru/"
     )
     assert "--remote-debugging-port=9222" in captured["command"]
+    assert "--lang=ru-RU" in captured["command"]
     assert "https://data.ozon.ru/" in captured["command"]
     assert (tmp_path / "profile").is_dir()
     assert captured["start_new_session"] is True
