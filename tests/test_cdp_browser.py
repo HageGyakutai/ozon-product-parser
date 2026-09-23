@@ -15,9 +15,7 @@ def test_ensure_cdp_browser_reuses_ready_session(monkeypatch):
     )
 
     assert (
-        cdp_browser.ensure_cdp_browser(
-            "http://127.0.0.1:9222", start_url="https://data.ozon.ru/"
-        )
+        cdp_browser.ensure_cdp_browser("http://127.0.0.1:9222", start_url="https://data.ozon.ru/")
         is False
     )
 
