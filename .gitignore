@@ -12,6 +12,7 @@ browser-cookies*.json
 __pycache__/
 *.py[cod]
 *.egg-info/
+*.lnk
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

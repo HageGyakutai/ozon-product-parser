@@ -199,73 +199,70 @@ uv run python scripts/parse_ozon.py \
 Ozon может вернуть HTTP 403 автоматическому HTTP-клиенту даже с действительными
 cookies. В таком случае используйте проверенный `--transport browser`.
 
-## 4. Ежедневный запуск через Airflow в Docker
+## 4. Ежедневный запуск через Airflow
 
-Сначала один раз получите cookies на основной системе:
+Airflow запускается локально в том же окружении, что и браузерный парсер.
+PostgreSQL при этом работает в Docker. Такая схема позволяет DAG использовать
+проверенную браузерную сессию основной системы.
+
+Сначала получите cookies и убедитесь, что обычный запуск парсера работает:
 
 ```bash
 uv run python scripts/get_cookies.py
+
+uv run python scripts/parse_ozon.py \
+  2359066702 2829800382 \
+  --transport browser \
+  --output database
 ```
 
-Файл `cookies.json` должен существовать до запуска контейнера. Список товаров
-задаётся в `.env`:
+Список товаров для DAG задаётся в `.env`:
 
 ```dotenv
 OZON_AIRFLOW_SKUS=2359066702,2829800382
 ```
 
-Если локальный `airflow standalone` уже запущен, остановите его через
-`Ctrl+C`, чтобы освободить порт 8080. Затем соберите и запустите Airflow,
-Chromium и PostgreSQL в фоне:
+Установите отдельную группу зависимостей Airflow и запустите PostgreSQL:
 
 ```bash
-docker compose --profile airflow up -d --build airflow
+uv sync --locked --group airflow
+docker compose up -d --wait postgres
 ```
 
-Проверка состояния и просмотр логов:
+Запустите Airflow в первом терминале:
 
 ```bash
-docker compose ps
-docker compose logs -f airflow
+export AIRFLOW_HOME="$PWD/.airflow"
+export AIRFLOW__CORE__DAGS_FOLDER="$PWD/dags"
+
+uv run --group airflow airflow standalone
 ```
 
-Команда просмотра логов не останавливает контейнер. Для выхода нажмите
-`Ctrl+C`.
+Первый запуск может занять несколько минут. Терминал должен оставаться
+открытым. Интерфейс доступен по адресу <http://localhost:8080>; имя
+пользователя и пароль выводятся при запуске `airflow standalone`.
 
-Интерфейс доступен по адресу <http://localhost:8080>. Имя пользователя:
-
-```text
-admin
-```
-
-Airflow создаёт случайный пароль при первом запуске и сохраняет его в
-постоянном Docker volume. Посмотреть пароль:
+В другом терминале используйте те же переменные окружения, активируйте DAG и
+запустите его вручную для проверки:
 
 ```bash
-docker compose exec airflow \
-  cat /opt/airflow/simple_auth_manager_passwords.json.generated
+cd /path/to/ozon-product-parser
+
+export AIRFLOW_HOME="$PWD/.airflow"
+export AIRFLOW__CORE__DAGS_FOLDER="$PWD/dags"
+
+uv run --group airflow airflow dags unpause ozon_products_daily
+uv run --group airflow airflow dags trigger ozon_products_daily
+uv run --group airflow airflow dags list-runs ozon_products_daily
 ```
 
-Включить и проверить DAG можно через интерфейс либо командами:
+Запуск должен последовательно перейти из `queued` в `running`, затем в
+`success`. DAG выполняется ежедневно в 06:00 UTC и сохраняет товары в
+PostgreSQL. Для остановки локального Airflow нажмите `Ctrl+C` в первом
+терминале.
 
-```bash
-docker compose exec airflow airflow dags unpause ozon_products_daily
-docker compose exec airflow airflow dags trigger ozon_products_daily
-```
-
-DAG запускается ежедневно в 06:00 UTC, открывает Chromium внутри того же
-контейнера и сохраняет товары в PostgreSQL. Логи Airflow, его служебная база и
-профиль Chromium сохраняются в Docker volumes.
-
-DAG использует подключённый только для чтения `cookies.json`. Если сессия
-Ozon истекла, остановите Airflow, повторно выполните `get_cookies.py` на
-основной системе и снова запустите контейнер:
-
-```bash
-docker compose stop airflow
-uv run python scripts/get_cookies.py
-docker compose --profile airflow up -d airflow
-```
+Служебная база, настройки и логи локального Airflow находятся в каталоге
+`.airflow/`, который исключён из Git.
 
 ## Проверки качества
 
@@ -307,7 +304,6 @@ src/ozon_parser/
   storage.py           SQLAlchemy и UPSERT
   database_runtime.py  healthcheck PostgreSQL и Alembic
   airflow_task.py       запуск существующего CLI из Airflow
-Dockerfile.airflow      образ Airflow с Chromium
 alembic/               миграции PostgreSQL
 tests/                 автоматические тесты
 ```
