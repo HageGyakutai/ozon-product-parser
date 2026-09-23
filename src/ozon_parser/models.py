@@ -1,3 +1,5 @@
+"""Validated product data shared by extractors and persistence adapters."""
+
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -17,7 +19,7 @@ class Product:
     art_set: str | None = None
     has_rich_content: bool = False
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.sku, str) or not self.sku.isascii() or not self.sku.isdecimal():
             raise ValueError("SKU must contain ASCII digits")
         if len(self.sku) > 64:
