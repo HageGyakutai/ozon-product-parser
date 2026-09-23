@@ -123,7 +123,11 @@ def main() -> None:
         if cdp_url:
             if browser_name != "chromium":
                 raise ValueError("OZON_CDP_URL is available only with OZON_BROWSER=chromium")
-            ensure_cdp_browser(cdp_url, start_url="https://data.ozon.ru/")
+            ensure_cdp_browser(
+                cdp_url,
+                start_url="https://data.ozon.ru/",
+                playwright_executable=playwright.chromium.executable_path,
+            )
             LOGGER.info("Connecting to Chrome session via CDP")
             browser = playwright.chromium.connect_over_cdp(cdp_url)
             if not browser.contexts:
