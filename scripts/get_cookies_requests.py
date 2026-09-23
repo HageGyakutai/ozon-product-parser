@@ -149,7 +149,7 @@ def main() -> None:
         if not cookies:
             raise RuntimeError("Ozon requests login returned no Ozon cookies")
         path = Path(os.getenv("OZON_COOKIES_FILE", "cookies.json"))
-        save_browser_session(path, cookies, session.headers["User-Agent"])
+        save_browser_session(path, cookies, USER_AGENT)
     LOGGER.info("Ozon requests login completed; cookies saved to %s", path)
 
 
