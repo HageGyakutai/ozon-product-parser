@@ -98,7 +98,7 @@ class BrowserProductClient:
                 self._context = self._browser.contexts[0]
             else:
                 launcher = getattr(self._playwright, browser_name)
-                launch_options = {"headless": headless}
+                launch_options: dict[str, object] = {"headless": headless}
                 if channel:
                     launch_options["channel"] = channel
                 self._browser = launcher.launch(**launch_options)
@@ -108,12 +108,14 @@ class BrowserProductClient:
                     context_options["user_agent"] = user_agent
                 self._context = self._browser.new_context(**context_options)
                 self._owns_context = True
+            assert self._context is not None
             self._context.add_cookies(browser_cookies)
         except Exception as exc:
             self.close()
             raise RuntimeError(f"Cannot start browser transport: {exc}") from exc
 
     def fetch_product(self, sku: str) -> str:
+        assert self._context is not None
         page = self._context.new_page()
         try:
             response = page.goto(

@@ -163,7 +163,7 @@ def dom_characteristics(soup: BeautifulSoup) -> dict[str, str | None]:
             if current is None:
                 break
 
-        value = next(
+        candidate_value = next(
             (
                 _clean_text(candidate.get_text(" ", strip=True))
                 for candidate in candidates
@@ -172,13 +172,13 @@ def dom_characteristics(soup: BeautifulSoup) -> dict[str, str | None]:
             ),
             None,
         )
-        if not value:
+        if not candidate_value:
             continue
         for field, aliases in DOM_CHARACTERISTIC_ALIASES.items():
             if label in aliases and field not in result:
-                result[field] = value
+                result[field] = candidate_value
         if label in DOM_ART_PRIORITY and label not in articles:
-            articles[label] = value
+            articles[label] = candidate_value
 
     result["art_set"] = next(
         (articles[name] for name in DOM_ART_PRIORITY if name in articles),

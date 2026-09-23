@@ -4,12 +4,11 @@ import logging
 import subprocess
 from pathlib import Path
 
+from alembic.command import upgrade
 from alembic.config import Config
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
-
-from alembic import command
 
 LOGGER = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -46,7 +45,7 @@ def _start_postgres() -> None:
 def _apply_migrations() -> None:
     LOGGER.info("Applying Alembic migrations")
     config = Config(str(PROJECT_ROOT / "alembic.ini"))
-    command.upgrade(config, "head")
+    upgrade(config, "head")
 
 
 def prepare_database(engine: Engine, *, auto_start: bool = True) -> None:
