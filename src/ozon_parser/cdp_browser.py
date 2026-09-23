@@ -27,9 +27,7 @@ def cdp_is_ready(endpoint: str) -> bool:
 def _local_cdp_port(endpoint: str) -> int:
     parsed = urlparse(endpoint)
     if parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
-        raise RuntimeError(
-            "Automatic Chrome startup supports only a local HTTP OZON_CDP_ENDPOINT"
-        )
+        raise RuntimeError("Automatic Chrome startup supports only a local HTTP OZON_CDP_ENDPOINT")
     return parsed.port or 80
 
 
@@ -44,9 +42,7 @@ def _chrome_executable() -> str:
         executable = shutil.which(name)
         if executable:
             return executable
-    raise RuntimeError(
-        "Google Chrome/Chromium was not found. Set OZON_CHROME_EXECUTABLE in .env."
-    )
+    raise RuntimeError("Google Chrome/Chromium was not found. Set OZON_CHROME_EXECUTABLE in .env.")
 
 
 
