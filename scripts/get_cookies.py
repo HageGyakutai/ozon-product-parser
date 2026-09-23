@@ -49,6 +49,11 @@ def authenticate(context, phone: str, gmail) -> None:
     ).first
     analytics_button.wait_for(state="visible", timeout=30000)
     analytics_button.click()
+    page.wait_for_url(
+        re.compile(r"^https://sso\.ozon\.ru/"),
+        wait_until="commit",
+        timeout=30000,
+    )
     page = current_page(context)
     ensure_not_blocked(context)
     phone_input = page.locator(
