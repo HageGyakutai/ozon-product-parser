@@ -112,9 +112,7 @@ class BrowserProductClient:
                 self._browser = launcher.launch(**launch_options)
                 self._owns_browser = True
                 if user_agent:
-                    self._context = self._browser.new_context(
-                        locale="ru-RU", user_agent=user_agent
-                    )
+                    self._context = self._browser.new_context(locale="ru-RU", user_agent=user_agent)
                 else:
                     self._context = self._browser.new_context(locale="ru-RU")
                 self._owns_context = True
