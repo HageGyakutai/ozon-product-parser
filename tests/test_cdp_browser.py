@@ -24,7 +24,9 @@ def test_ensure_cdp_browser_starts_chrome_and_waits(monkeypatch, tmp_path):
     states = iter([False, False, True])
     captured = {}
     monkeypatch.setattr(cdp_browser, "cdp_is_ready", lambda endpoint: next(states))
-    monkeypatch.setattr(cdp_browser, "_chrome_executable", lambda expected_path=None: "/usr/bin/chrome")
+    monkeypatch.setattr(
+        cdp_browser, "_chrome_executable", lambda expected_path=None: "/usr/bin/chrome"
+    )
     monkeypatch.setenv("OZON_CHROME_PROFILE", str(tmp_path / "profile"))
     monkeypatch.setattr(cdp_browser.time, "sleep", lambda seconds: None)
 
@@ -49,7 +51,9 @@ def test_headless_chrome_flags(monkeypatch, tmp_path):
     states = iter([False, True])
     captured = {}
     monkeypatch.setattr(cdp_browser, "cdp_is_ready", lambda endpoint: next(states))
-    monkeypatch.setattr(cdp_browser, "_chrome_executable", lambda expected_path=None: "/usr/bin/chromium")
+    monkeypatch.setattr(
+        cdp_browser, "_chrome_executable", lambda expected_path=None: "/usr/bin/chromium"
+    )
     monkeypatch.setenv("OZON_CHROME_PROFILE", str(tmp_path / "profile"))
     monkeypatch.setenv("OZON_CHROME_HEADLESS", "true")
     monkeypatch.setattr(cdp_browser.time, "sleep", lambda seconds: None)
@@ -140,7 +144,9 @@ def test_chrome_executable_uses_installed_playwright_browser(monkeypatch, tmp_pa
 def test_chrome_executable_installs_playwright_browser(monkeypatch):
     monkeypatch.delenv("OZON_CHROME_EXECUTABLE", raising=False)
     monkeypatch.setattr(cdp_browser.shutil, "which", lambda name: None)
-    monkeypatch.setattr(cdp_browser, "_playwright_chromium_executable", lambda expected_path=None: None)
+    monkeypatch.setattr(
+        cdp_browser, "_playwright_chromium_executable", lambda expected_path=None: None
+    )
     monkeypatch.setattr(
         cdp_browser,
         "_install_playwright_chromium",
