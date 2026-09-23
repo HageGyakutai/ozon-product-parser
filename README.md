@@ -37,31 +37,58 @@ cp .env.example .env
 
 ## PostgreSQL
 
-Один запуск **после появления действительного `cookies.json`**: Compose поднимет PostgreSQL, дождётся статуса healthy, выполнит Alembic и только затем запустит парсер. Коды SKU передаются последними аргументами:
+Docker Compose используется только для инфраструктуры: PostgreSQL и отдельного
+ручного сервиса миграций. Основной парсер остаётся обычным Python-скриптом, чтобы
+его можно было позднее вызывать из Airflow.
+
+При выборе PostgreSQL:
 
 ```bash
-docker compose run --build --rm parser-db 2359066702 2829800382 --output database
+uv run python scripts/parse_ozon.py \
+  2359066702 2829800382 \
+  --transport browser \
+  --output database
 ```
 
-Если cookies пока нет, можно одной командой подготовить только PostgreSQL и таблицу `products`:
+Скрипт выполняет последовательность автоматически:
+
+1. проверяет соединение с PostgreSQL запросом `SELECT 1`;
+2. если база недоступна, запускает `docker compose up -d --wait postgres`;
+3. дожидается успешного healthcheck контейнера;
+4. применяет `alembic upgrade head`;
+5. повторно проверяет соединение и сохраняет товары с UPSERT по SKU.
+
+Если PostgreSQL уже работает, Docker повторно не запускается. Миграции всё равно
+приводятся к актуальной версии перед записью.
+
+Для будущего Airflow или другого окружения, где инфраструктура управляется
+отдельно, автоматический запуск Docker можно запретить:
+
+```bash
+uv run python scripts/parse_ozon.py \
+  2359066702 2829800382 \
+  --output database \
+  --no-start-database
+```
+
+В этом режиме недоступная база приводит к понятной ошибке, а не к запуску Docker.
+
+Поднять PostgreSQL вручную можно командой:
+
+```bash
+docker compose up -d --wait postgres
+```
+
+Отдельно применить миграции в контейнере:
 
 ```bash
 docker compose up --build --exit-code-from migrate migrate
 ```
 
-После подготовки БД получение cookies выполняется в локальном Python-окружении (`get_cookies.py` запускает браузер), а парсер — через Compose либо локально. Сервис `parser-db` автоматически поднимает PostgreSQL, ожидает успешный healthcheck и выполнение миграций.
-
-Для сохранения только в CSV PostgreSQL не запускается:
-
-```bash
-docker compose run --build --rm parser-csv 2359066702 2829800382
-```
-
-Файл появится на хосте в `output/products.csv`.
-
-При запуске парсера контейнер читает локальный `cookies.json` только для чтения. Файл не копируется в Docker-образ. Без действительных cookies или при отказе Ozon парсер завершится ошибкой.
-
-При локальном запуске Python вне Compose в `.env` установите `DATABASE_URL=postgresql+psycopg://ozon:local_only_change_me@localhost:5432/ozon`. PostgreSQL 16, SQLAlchemy 2, psycopg 3; миграция создаёт `products` с уникальным индексом `sku`, NUMERIC для цены и рейтинга, nullable характеристиками и timestamptz для дат. Повторное сохранение выполняет `ON CONFLICT (sku) DO UPDATE`.
+При локальном запуске в `.env` используется
+`DATABASE_URL=postgresql+psycopg://ozon:local_only_change_me@localhost:5432/ozon`.
+PostgreSQL 16, SQLAlchemy 2, psycopg 3; миграция создаёт `products` с уникальным
+индексом `sku`. Повторное сохранение выполняет `ON CONFLICT (sku) DO UPDATE`.
 
 ## Авторизация и Gmail
 
