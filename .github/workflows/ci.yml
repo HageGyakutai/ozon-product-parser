@@ -17,7 +17,7 @@ jobs:
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uvx --with types-requests mypy src scripts
+      - run: uv run mypy src scripts
       - name: Start healthy PostgreSQL and run Alembic
         run: docker compose up --build --exit-code-from migrate migrate
       - name: Check migrated table and create isolated test database
