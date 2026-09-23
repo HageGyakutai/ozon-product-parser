@@ -208,9 +208,13 @@ def test_parser_missing_database_url_has_exit_2(monkeypatch):
 def test_parser_success_exit_0_and_nested_csv(monkeypatch, tmp_path, skus):
     saved = setup_parse(monkeypatch)
     csv_path = tmp_path / "nested" / "products.csv"
-    monkeypatch.setattr(sys, "argv", ["parse_ozon.py", *skus, "--csv", str(csv_path)])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["parse_ozon.py", *skus, "--output", "csv", "--csv", str(csv_path)],
+    )
     assert parse.main() is None
-    assert [product.sku for product in saved] == skus
+    assert saved == []
     with csv_path.open(encoding="utf-8-sig", newline="") as stream:
         assert [row["sku"] for row in csv.DictReader(stream)] == skus
 
@@ -225,13 +229,35 @@ def test_parser_partial_failure_exit_1_and_csv_only_contains_success(monkeypatch
         ),
     )
     csv_path = tmp_path / "products.csv"
-    monkeypatch.setattr(sys, "argv", ["parse_ozon.py", "123", "456", "--csv", str(csv_path)])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["parse_ozon.py", "123", "456", "--output", "csv", "--csv", str(csv_path)],
+    )
     with pytest.raises(SystemExit) as exc:
         parse.main()
     assert exc.value.code == 1
-    assert [product.sku for product in saved] == ["456"]
+    assert saved == []
     with csv_path.open(encoding="utf-8-sig", newline="") as stream:
         assert [row["sku"] for row in csv.DictReader(stream)] == ["456"]
+
+
+def test_csv_output_does_not_initialize_database(monkeypatch, tmp_path):
+    setup_parse(monkeypatch)
+    monkeypatch.setattr(
+        parse,
+        "database_engine",
+        lambda: pytest.fail("CSV mode must not initialize PostgreSQL"),
+    )
+    csv_path = tmp_path / "products.csv"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["parse_ozon.py", "123", "--output", "csv", "--csv", str(csv_path)],
+    )
+
+    assert parse.main() is None
+    assert csv_path.exists()
 
 
 def test_parser_browser_transport_uses_browser_client(monkeypatch):
