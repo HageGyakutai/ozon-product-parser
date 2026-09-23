@@ -138,6 +138,7 @@ def ensure_cdp_browser(
         f"--remote-debugging-port={port}",
         "--remote-debugging-address=127.0.0.1",
         f"--user-data-dir={profile}",
+        "--lang=ru-RU",
     ]
     if _headless_enabled():
         command.extend(

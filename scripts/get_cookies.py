@@ -16,6 +16,15 @@ from ozon_parser.gmail import gmail_service, wait_for_code
 from ozon_parser.session_data import ozon_cookie_domain, save_browser_session
 
 LOGGER = logging.getLogger(__name__)
+ANALYTICS_BUTTON_NAME = re.compile(r"Перейти к аналитике|analytics", re.I)
+PHONE_SUBMIT_BUTTON_NAME = re.compile(
+    r"^(Войти|Продолжить|Sign in|Log in|Continue|Next)$",
+    re.I,
+)
+CODE_SUBMIT_BUTTON_NAME = re.compile(
+    r"Подтвердить|Продолжить|Войти|Confirm|Continue|Sign in|Log in|Next",
+    re.I,
+)
 
 
 def ensure_not_blocked(context) -> None:
@@ -45,9 +54,7 @@ def authenticate(context, phone: str, gmail) -> None:
     else:
         LOGGER.info("Reusing data.ozon.ru page already open in Chrome")
     ensure_not_blocked(context)
-    analytics_button = page.get_by_role(
-        "button", name=re.compile("Перейти к аналитике", re.I)
-    ).first
+    analytics_button = page.get_by_role("button", name=ANALYTICS_BUTTON_NAME).first
     analytics_button.wait_for(state="visible", timeout=30000)
     analytics_button.click()
     page.wait_for_url(
@@ -65,7 +72,7 @@ def authenticate(context, phone: str, gmail) -> None:
     phone_input.wait_for(state="visible", timeout=30000)
     phone_input.fill(phone)
     started = datetime.now(UTC)
-    page.get_by_role("button", name=re.compile(r"^Войти$|Продолжить", re.I)).click()
+    page.get_by_role("button", name=PHONE_SUBMIT_BUTTON_NAME).click()
     LOGGER.info("Phone verification requested")
     ensure_not_blocked(context)
     LOGGER.info("Waiting for new Gmail verification email")
@@ -80,9 +87,7 @@ def authenticate(context, phone: str, gmail) -> None:
     code_input.fill(code)
     # Ozon may submit automatically after the last digit.
     try:
-        page.get_by_role("button", name=re.compile("Подтвердить|Продолжить|Войти", re.I)).click(
-            timeout=3000
-        )
+        page.get_by_role("button", name=CODE_SUBMIT_BUTTON_NAME).click(timeout=3000)
     except PlaywrightTimeoutError:
         pass
     try:
