@@ -196,7 +196,7 @@ cookies. В таком случае используйте проверенны�
 ```bash
 uv run ruff check .
 uv run ruff format --check .
-uvx --with types-requests mypy src scripts
+uv run mypy src scripts
 uv run pytest -q
 ```
 
