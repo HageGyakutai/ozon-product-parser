@@ -11,6 +11,7 @@ from urllib.request import urlopen
 LOGGER = logging.getLogger(__name__)
 DEFAULT_CDP_ENDPOINT = "http://127.0.0.1:9222"
 DEFAULT_PROFILE = Path.home() / ".cache" / "ozon-parser-chrome"
+DEFAULT_STARTUP_DELAY = 2.0
 
 
 def cdp_is_ready(endpoint: str) -> bool:
@@ -46,6 +47,18 @@ def _chrome_executable() -> str:
     )
 
 
+
+def _startup_delay() -> float:
+    raw_value = os.getenv("OZON_CHROME_STARTUP_DELAY", str(DEFAULT_STARTUP_DELAY)).strip()
+    try:
+        delay = float(raw_value)
+    except ValueError as exc:
+        raise RuntimeError("OZON_CHROME_STARTUP_DELAY must be a number") from exc
+    if not 0 <= delay <= 30:
+        raise RuntimeError("OZON_CHROME_STARTUP_DELAY must be between 0 and 30 seconds")
+    return delay
+
+
 def ensure_cdp_browser(endpoint: str, *, start_url: str) -> bool:
     endpoint = endpoint.strip()
     if cdp_is_ready(endpoint):
@@ -75,6 +88,10 @@ def ensure_cdp_browser(endpoint: str, *, start_url: str) -> bool:
     while time.monotonic() < deadline:
         if cdp_is_ready(endpoint):
             LOGGER.info("Chrome CDP is ready at %s", endpoint)
+            delay = _startup_delay()
+            if delay:
+                LOGGER.info("Waiting %.1f seconds for Chrome UI readiness", delay)
+                time.sleep(delay)
             return True
         if process.poll() is not None:
             raise RuntimeError(
