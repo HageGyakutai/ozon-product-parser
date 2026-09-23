@@ -37,9 +37,15 @@ def login_page(context):
 
 def authenticate(context, phone: str, gmail) -> None:
     page = login_page(context)
-    page.goto("https://data.ozon.ru/", wait_until="domcontentloaded", timeout=30000)
+    # Ozon can keep loading background resources for a long time. Waiting for
+    # the navigation commit is enough; the locator below verifies UI readiness.
+    page.goto("https://data.ozon.ru/", wait_until="commit", timeout=30000)
     ensure_not_blocked(context)
-    page.get_by_role("button", name=re.compile("Перейти к аналитике", re.I)).first.click()
+    analytics_button = page.get_by_role(
+        "button", name=re.compile("Перейти к аналитике", re.I)
+    ).first
+    analytics_button.wait_for(state="visible", timeout=30000)
+    analytics_button.click()
     page = current_page(context)
     ensure_not_blocked(context)
     phone_input = page.get_by_placeholder(re.compile(r"9999|телефон", re.I))
