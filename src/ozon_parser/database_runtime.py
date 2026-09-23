@@ -2,10 +2,11 @@ import logging
 import subprocess
 from pathlib import Path
 
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+
+from alembic import command
 
 LOGGER = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
