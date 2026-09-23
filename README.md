@@ -24,12 +24,12 @@
 
 ## Стек
 
-Python 3.12+, Playwright, Requests, BeautifulSoup, Gmail API, SQLAlchemy,
+Python 3.12, Playwright, Requests, BeautifulSoup, Gmail API, SQLAlchemy,
 PostgreSQL 16, Alembic, Docker Compose, Airflow, pytest, Ruff и mypy.
 
 ## Требования
 
-- Python 3.12 или новее;
+- Python 3.12.x;
 - [uv](https://docs.astral.sh/uv/);
 - Docker с Docker Compose;
 - Google Chrome или Chromium;
@@ -40,6 +40,7 @@ PostgreSQL 16, Alembic, Docker Compose, Airflow, pytest, Ruff и mypy.
 ```bash
 git clone git@github.com:HageGyakutai/ozon-product-parser.git
 cd ozon-product-parser
+uv python install 3.12
 uv sync --locked
 cp .env.example .env
 ```
