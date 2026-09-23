@@ -6,6 +6,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 from .auth_guard import blocked_page_text
+from .cdp_browser import ensure_cdp_browser
 from .session_data import load_browser_session, ozon_cookie_domain
 
 
@@ -84,9 +85,11 @@ class BrowserProductClient:
         self._playwright = sync_playwright().start()
         self._browser = None
         self._context = None
+        self._owns_browser = False
         self._owns_context = False
         try:
             if cdp_endpoint:
+                ensure_cdp_browser(cdp_endpoint, start_url="https://www.ozon.ru/")
                 self._browser = self._playwright.chromium.connect_over_cdp(cdp_endpoint)
                 if not self._browser.contexts:
                     raise RuntimeError("Connected Chrome has no default browser context")
@@ -97,6 +100,7 @@ class BrowserProductClient:
                 if channel:
                     launch_options["channel"] = channel
                 self._browser = launcher.launch(**launch_options)
+                self._owns_browser = True
                 context_options = {"locale": "ru-RU"}
                 if user_agent:
                     context_options["user_agent"] = user_agent
@@ -156,8 +160,10 @@ class BrowserProductClient:
             self._context = None
             self._owns_context = False
         if self._browser is not None:
-            self._browser.close()
+            if self._owns_browser:
+                self._browser.close()
             self._browser = None
+            self._owns_browser = False
         if self._playwright is not None:
             self._playwright.stop()
             self._playwright = None
