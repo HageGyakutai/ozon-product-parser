@@ -34,8 +34,12 @@ def _local_cdp_port(endpoint: str) -> int:
     return parsed.port or 80
 
 
-def _playwright_chromium_executable() -> str | None:
+def _playwright_chromium_executable(expected_path: str | None = None) -> str | None:
     """Return the bundled Playwright Chromium path when it is installed."""
+    if expected_path:
+        executable = Path(expected_path)
+        return str(executable) if executable.is_file() else None
+
     try:
         from playwright.sync_api import sync_playwright
 
@@ -46,7 +50,7 @@ def _playwright_chromium_executable() -> str | None:
     return str(executable) if executable.is_file() else None
 
 
-def _install_playwright_chromium() -> str:
+def _install_playwright_chromium(expected_path: str | None = None) -> str:
     """Download Chromium into Playwright's user cache and return its path."""
     LOGGER.info("Chrome/Chromium was not found; installing Playwright Chromium")
     try:
@@ -61,7 +65,7 @@ def _install_playwright_chromium() -> str:
         ) from exc
 
     for attempt in range(PLAYWRIGHT_DISCOVERY_ATTEMPTS):
-        executable = _playwright_chromium_executable()
+        executable = _playwright_chromium_executable(expected_path)
         if executable is not None:
             LOGGER.info("Playwright Chromium is ready at %s", executable)
             return executable
@@ -73,7 +77,7 @@ def _install_playwright_chromium() -> str:
     )
 
 
-def _chrome_executable() -> str:
+def _chrome_executable(playwright_executable: str | None = None) -> str:
     configured = os.getenv("OZON_CHROME_EXECUTABLE", "").strip()
     if configured:
         if Path(configured).is_file():
@@ -85,10 +89,10 @@ def _chrome_executable() -> str:
         if executable:
             return executable
 
-    playwright_executable = _playwright_chromium_executable()
-    if playwright_executable:
-        return playwright_executable
-    return _install_playwright_chromium()
+    installed_playwright_executable = _playwright_chromium_executable(playwright_executable)
+    if installed_playwright_executable:
+        return installed_playwright_executable
+    return _install_playwright_chromium(playwright_executable)
 
 
 def _startup_delay() -> float:
@@ -111,7 +115,12 @@ def _headless_enabled() -> bool:
     raise RuntimeError("OZON_CHROME_HEADLESS must be true or false")
 
 
-def ensure_cdp_browser(endpoint: str, *, start_url: str) -> bool:
+def ensure_cdp_browser(
+    endpoint: str,
+    *,
+    start_url: str,
+    playwright_executable: str | None = None,
+) -> bool:
     """Ensure local Chrome CDP is ready; return whether Chrome was started."""
     endpoint = endpoint.strip()
     if cdp_is_ready(endpoint):
@@ -122,7 +131,7 @@ def ensure_cdp_browser(endpoint: str, *, start_url: str) -> bool:
     profile_value = os.getenv("OZON_CHROME_PROFILE", "").strip() or str(DEFAULT_PROFILE)
     profile = Path(profile_value).expanduser()
     profile.mkdir(parents=True, exist_ok=True)
-    executable = _chrome_executable()
+    executable = _chrome_executable(playwright_executable)
     LOGGER.info("Chrome CDP is unavailable; starting %s", executable)
     command = [
         executable,
